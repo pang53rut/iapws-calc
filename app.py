@@ -6,6 +6,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/')
+def home():
+    return "✅ IAPWS Steam API is live. Use /api/steam?input=P&value=1.5"
+
 @app.route('/api/steam', methods=['GET'])
 def steam_properties():
     try:
