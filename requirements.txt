@@ -1,0 +1,4 @@
+flask
+iapws
+flask-cors
+gunicorn
