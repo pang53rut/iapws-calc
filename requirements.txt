@@ -2,3 +2,4 @@ flask
 iapws
 flask-cors
 gunicorn
+numpy
