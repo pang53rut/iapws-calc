@@ -35,6 +35,7 @@ def steam_properties():
                 's': round(water.s, 4),
                 'u': round(water.u, 2),
                 'v': round(water.v, 6),
+                'density': round(1 / water.v, 2),
                 'x': 0
             },
             'Saturated Vapor': {
@@ -44,6 +45,7 @@ def steam_properties():
                 's': round(steam.s, 4),
                 'u': round(steam.u, 2),
                 'v': round(steam.v, 6),
+                'density': round(1 / steam.v, 2),
                 'x': 1
             }
         })
