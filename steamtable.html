@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steam Table Online</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-teal-600 to-blue-700 text-white py-4 shadow">
+    <div class="max-w-5xl mx-auto text-center text-2xl font-semibold">
+      Steam Table Online
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto mt-8 flex flex-col lg:flex-row gap-6">
+    <!-- Main Content -->
+    <section class="flex-1 space-y-6">
+
+      <!-- Input Section -->
+      <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Input</h2>
+
+        <!-- Mode Buttons -->
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button id="btnPressure" class="px-4 py-2 border rounded-lg hover:bg-blue-100 bg-blue-600 text-white">Pressure</button>
+          <button id="btnTemperature" class="px-4 py-2 border rounded-lg hover:bg-blue-100">Temperature</button>
+          <button id="btnPT" class="px-4 py-2 border rounded-lg hover:bg-blue-100">Pressure & Temperature</button>
+        </div>
+
+        <!-- Dynamic Input Fields -->
+        <form id="inputForm" class="space-y-3">
+          <div id="pressureInput" class="flex items-center gap-2">
+            <label class="w-24 font-medium">Pressure</label>
+            <input id="pressureValue" type="number" step="any" value="1" class="border rounded p-2 w-32" />
+            <select id="pressureUnit" class="border rounded p-2">
+              <option>bar</option>
+              <option>MPa</option>
+              <option>kPa</option>
+            </select>
+          </div>
+
+          <div id="temperatureInput" class="flex items-center gap-2 hidden">
+            <label class="w-24 font-medium">Temperature</label>
+            <input id="temperatureValue" type="number" step="any" value="100" class="border rounded p-2 w-32" />
+            <select id="temperatureUnit" class="border rounded p-2">
+              <option>°C</option>
+              <option>K</option>
+            </select>
+          </div>
+
+          <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg">
+            Submit
+          </button>
+        </form>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results" class="bg-white rounded-2xl shadow p-6 hidden">
+        <h2 class="text-xl font-semibold mb-4">Results</h2>
+        <table class="w-full border-collapse border border-gray-300 text-sm">
+          <thead>
+            <tr class="bg-gray-100">
+              <th class="border p-2 text-left">Property</th>
+              <th class="border p-2 text-right">Value</th>
+              <th class="border p-2 text-left">Unit</th>
+            </tr>
+          </thead>
+          <tbody id="resultTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="w-full lg:w-64 space-y-4">
+      <div class="bg-white p-4 rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">Feedback</h3>
+        <p class="text-sm mb-2">Have suggestions or found bugs?</p>
+        <a href="#" class="text-blue-600 hover:underline text-sm">Send Feedback</a>
+      </div>
+      <div class="bg-white p-4 rounded-2xl shadow">
+        <h3 class="font-semibold mb-2">Support</h3>
+        <p class="text-sm mb-2">Like this project? You can support development.</p>
+        <a href="#" class="text-blue-600 hover:underline text-sm">Donate via PayPal</a>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+  let mode = "pressure";
+
+  const btnPressure = document.getElementById("btnPressure");
+  const btnTemperature = document.getElementById("btnTemperature");
+  const btnPT = document.getElementById("btnPT");
+  const pressureInput = document.getElementById("pressureInput");
+  const temperatureInput = document.getElementById("temperatureInput");
+  const form = document.getElementById("inputForm");
+  const resultDiv = document.getElementById("results");
+  const resultBody = document.getElementById("resultTableBody");
+
+  const API_URL = "https://iapws-calc.onrender.com/api/steam";
+
+  function setMode(newMode) {
+    mode = newMode;
+
+    [btnPressure, btnTemperature, btnPT].forEach(btn =>
+      btn.classList.remove("bg-blue-600", "text-white")
+    );
+    if (mode === "pressure") btnPressure.classList.add("bg-blue-600", "text-white");
+    if (mode === "temperature") btnTemperature.classList.add("bg-blue-600", "text-white");
+    if (mode === "pt") btnPT.classList.add("bg-blue-600", "text-white");
+
+    if (mode === "pressure") {
+      pressureInput.classList.remove("hidden");
+      temperatureInput.classList.add("hidden");
+    } else if (mode === "temperature") {
+      pressureInput.classList.add("hidden");
+      temperatureInput.classList.remove("hidden");
+    } else {
+      pressureInput.classList.remove("hidden");
+      temperatureInput.classList.remove("hidden");
+    }
+  }
+
+  btnPressure.onclick = () => setMode("pressure");
+  btnTemperature.onclick = () => setMode("temperature");
+  btnPT.onclick = () => setMode("pt");
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+
+    let inputType = "";
+    let value = "";
+
+    if (mode === "pressure") {
+      inputType = "P";
+      value = parseFloat(document.getElementById("pressureValue").value);
+    } else if (mode === "temperature") {
+      inputType = "T";
+      value = parseFloat(document.getElementById("temperatureValue").value);
+    } else {
+      alert("Mode PT belum didukung backend.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}?input=${inputType}&value=${value}`);
+      const data = await res.json();
+
+      if (data.error) {
+        resultBody.innerHTML = `
+          <tr><td colspan="3" class="text-red-600 p-2">${data.error}</td></tr>`;
+        resultDiv.classList.remove("hidden");
+        return;
+      }
+
+      // Render hasil tabel
+      const rows = [
+        ["T (°C) - Saturated Liquid", data["Saturated Liquid"]["T (C)"], "°C"],
+        ["T (°C) - Saturated Vapor", data["Saturated Vapor"]["T (C)"], "°C"],
+        ["P (MPa)", data["Saturated Vapor"]["P (MPa)"], "MPa"],
+        ["h (liquid)", data["Saturated Liquid"]["h"], "kJ/kg"],
+        ["h (vapor)", data["Saturated Vapor"]["h"], "kJ/kg"],
+        ["s (liquid)", data["Saturated Liquid"]["s"], "kJ/kg·K"],
+        ["s (vapor)", data["Saturated Vapor"]["s"], "kJ/kg·K"],
+        ["u (liquid)", data["Saturated Liquid"]["u"], "kJ/kg"],
+        ["u (vapor)", data["Saturated Vapor"]["u"], "kJ/kg"],
+        ["v (liquid)", data["Saturated Liquid"]["v"], "m³/kg"],
+        ["v (vapor)", data["Saturated Vapor"]["v"], "m³/kg"],
+      ];
+
+      resultBody.innerHTML = rows.map(r => `
+        <tr>
+          <td class="border p-2">${r[0]}</td>
+          <td class="border p-2 text-right">${r[1]}</td>
+          <td class="border p-2">${r[2]}</td>
+        </tr>
+      `).join("");
+      resultDiv.classList.remove("hidden");
+
+    } catch (err) {
+      resultBody.innerHTML = `
+        <tr><td colspan="3" class="text-red-600 p-2">${err.message}</td></tr>`;
+      resultDiv.classList.remove("hidden");
+    }
+  };
+</script>
+
+
+
+</body>
+</html>
