@@ -181,29 +181,38 @@
     } else if (mode === "temperature") {
       const p_liq = getProp(liquid, ['P (MPa)', 'P', 'pressure']);
       const p_vap = getProp(vapor,  ['P (MPa)', 'P', 'pressure']);
+      const p_liq_bara = (p_liq * 10).toFixed(3);
+      const p_vap_bara = (p_vap * 10).toFixed(3);
+      const p_liq_barg = (p_liq_bara - 1.013).toFixed(3); // dikurangi tekanan atmosfer
+      const p_vap_barg = (p_vap_bara - 1.013).toFixed(3);
+
       rows.push(["P (MPa) - Saturated Liquid", p_liq, "MPa"]);
       rows.push(["P (MPa) - Saturated Vapor", p_vap, "MPa"]);
+      rows.push(["P (Pressure) - Saturated Liquid", p_liq_bara, "bar(a)"]);
+      rows.push(["P (Pressure) - Saturated Vapor", p_vap_bara, "bar(a)"]);
+      rows.push(["P (Gauge Pressure) - Saturated Liquid", p_liq_barg, "bar(g)"]);
+      rows.push(["P (Gauge Pressure) - Saturated Vapor", p_vap_barg, "bar(g)"]);
     }
 
     // entalpi, entropi, internal energy, specific volume (dengan fallback nama)
-    rows.push(["h (liquid)", getProp(liquid, ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
-    rows.push(["h (vapor)",  getProp(vapor,  ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
-    rows.push(["s (liquid)", getProp(liquid, ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
-    rows.push(["s (vapor)",  getProp(vapor,  ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
-    rows.push(["u (liquid)", getProp(liquid, ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
-    rows.push(["u (vapor)",  getProp(vapor,  ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
-    rows.push(["v (liquid)", getProp(liquid, ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
-    rows.push(["v (vapor)",  getProp(vapor,  ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
+    rows.push(["h (Enthalpy) - Saturated Liquid", getProp(liquid, ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
+    rows.push(["h (Enthalpy) - Saturated Vapor",  getProp(vapor,  ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
+    rows.push(["s (Entropy) - Saturated liquid", getProp(liquid, ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
+    rows.push(["s (Entropy) - Saturated vapor",  getProp(vapor,  ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
+    rows.push(["u (Internal energy) - Saturated liquid", getProp(liquid, ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
+    rows.push(["u (Internal energy) - Saturated vapor",  getProp(vapor,  ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
+    rows.push(["v (Specific volume) - Saturated liquid", getProp(liquid, ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
+    rows.push(["v (Specific volume) - Saturated vapor",  getProp(vapor,  ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
 
      // ✅ Tambahan baru
-    rows.push(["ρ (liquid)", liquid["rho (kg/m³)"], "kg/m³"]);
-    rows.push(["ρ (vapor)", vapor["rho (kg/m³)"], "kg/m³"]);
-    rows.push(["μ (liquid)", liquid["mu (Pa·s)"], "Pa·s"]);
-    rows.push(["μ (vapor)", vapor["mu (Pa·s)"], "Pa·s"]);
-    rows.push(["ν (liquid)", liquid["nu (m²/s)"], "m²/s"]);
-    rows.push(["ν (vapor)", vapor["nu (m²/s)"], "m²/s"]);
-    rows.push(["x (liquid)", liquid["x (quality)"], "-"]);
-    rows.push(["x (vapor)", vapor["x (quality)"], "-"]);
+    rows.push(["ρ (Density) - Saturated liquid", liquid["rho (kg/m³)"], "kg/m³"]);
+    rows.push(["ρ (Density) - Saturated vapor", vapor["rho (kg/m³)"], "kg/m³"]);
+    rows.push(["μ (Dynamic viscosity) - Saturated liquid", liquid["mu (Pa·s)"], "Pa·s"]);
+    rows.push(["μ (Dynamic viscosity) - Saturated vapor", vapor["mu (Pa·s)"], "Pa·s"]);
+    rows.push(["ν (Kinematic viscosity) - Saturated liquid", liquid["nu (m²/s)"], "m²/s"]);
+    rows.push(["ν (Kinematic viscosity) - Saturated vapor", vapor["nu (m²/s)"], "m²/s"]);
+    rows.push(["x (Steam quality) - Saturated liquid", liquid["x (quality)"], "%"]);
+    rows.push(["x (Steam quality) - Saturated vapor", vapor["x (quality)"], "%"]);
 
     // Render hasil ke tabel
     resultBody.innerHTML = rows.map(r => `
