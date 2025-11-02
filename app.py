@@ -7,7 +7,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "✅ IAPWS Steam API — Now with viscosity & quality!"
+    return "✅ IAPWS Steam API — with viscosity, density & quality!"
 
 @app.route('/api/steam', methods=['GET'])
 def steam_properties():
@@ -28,11 +28,22 @@ def steam_properties():
         else:
             return jsonify({'error': 'Invalid input type. Use "P" or "T".'})
 
-        # Calculate derived properties
+        # Helper: convert MPa → bar(a) & bar(g)
+        def add_pressures(state):
+            P_MPa = round(state.P, 5)
+            P_bara = round(P_MPa * 10, 4)
+            P_barg = round(P_bara - 1.01325, 4)
+            return P_MPa, P_bara, P_barg
+
+        Pw_MPa, Pw_bara, Pw_barg = add_pressures(water)
+        Ps_MPa, Ps_bara, Ps_barg = add_pressures(steam)
+
         results = {
             "Saturated Liquid": {
                 "T (°C)": round(water.T - 273.15, 2),
-                "P (MPa)": round(water.P, 5),
+                "P (MPa)": Pw_MPa,
+                "P (bar abs)": Pw_bara,
+                "P (bar g)": Pw_barg,
                 "h (kJ/kg)": round(water.h, 2),
                 "s (kJ/kg·K)": round(water.s, 4),
                 "u (kJ/kg)": round(water.u, 2),
@@ -44,7 +55,9 @@ def steam_properties():
             },
             "Saturated Vapor": {
                 "T (°C)": round(steam.T - 273.15, 2),
-                "P (MPa)": round(steam.P, 5),
+                "P (MPa)": Ps_MPa,
+                "P (bar abs)": Ps_bara,
+                "P (bar g)": Ps_barg,
                 "h (kJ/kg)": round(steam.h, 2),
                 "s (kJ/kg·K)": round(steam.s, 4),
                 "u (kJ/kg)": round(steam.u, 2),

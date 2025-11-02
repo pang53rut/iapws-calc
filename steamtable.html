@@ -195,6 +195,16 @@
     rows.push(["v (liquid)", getProp(liquid, ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
     rows.push(["v (vapor)",  getProp(vapor,  ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
 
+     // ✅ Tambahan baru
+    rows.push(["ρ (liquid)", liquid["rho (kg/m³)"], "kg/m³"]);
+    rows.push(["ρ (vapor)", vapor["rho (kg/m³)"], "kg/m³"]);
+    rows.push(["μ (liquid)", liquid["mu (Pa·s)"], "Pa·s"]);
+    rows.push(["μ (vapor)", vapor["mu (Pa·s)"], "Pa·s"]);
+    rows.push(["ν (liquid)", liquid["nu (m²/s)"], "m²/s"]);
+    rows.push(["ν (vapor)", vapor["nu (m²/s)"], "m²/s"]);
+    rows.push(["x (liquid)", liquid["x (quality)"], "-"]);
+    rows.push(["x (vapor)", vapor["x (quality)"], "-"]);
+
     // Render hasil ke tabel
     resultBody.innerHTML = rows.map(r => `
       <tr>
