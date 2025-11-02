@@ -7,59 +7,56 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "✅ IAPWS Steam API (accurate version). Use /api/steam?input=P&value=1.5"
+    return "✅ IAPWS Steam API — Now with viscosity & quality!"
 
 @app.route('/api/steam', methods=['GET'])
 def steam_properties():
     try:
-        input_type = request.args.get('input', '').upper()  # 'T' or 'P'
+        input_type = request.args.get('input', '').upper()
         value = float(request.args.get('value'))
 
-        if input_type == 'P':  # input dalam bar
+        if input_type == 'P':  # Pressure input (bar)
             P = value / 10  # convert bar → MPa
             water = IAPWS97(P=P, x=0)
             steam = IAPWS97(P=P, x=1)
-            return jsonify({
-                "Saturated Liquid": {
-                    "T (°C)": round(water.T - 273.15, 2),
-                    "h": round(water.h, 2),
-                    "s": round(water.s, 4),
-                    "u": round(water.u, 2),
-                    "v": round(water.v, 6)
-                },
-                "Saturated Vapor": {
-                    "T (°C)": round(steam.T - 273.15, 2),
-                    "P (MPa)": round(steam.P, 5),
-                    "h": round(steam.h, 2),
-                    "s": round(steam.s, 4),
-                    "u": round(steam.u, 2),
-                    "v": round(steam.v, 6)
-                }
-            })
 
-        elif input_type == 'T':  # input dalam °C
+        elif input_type == 'T':  # Temperature input (°C)
             T = value + 273.15
             water = IAPWS97(T=T, x=0)
             steam = IAPWS97(T=T, x=1)
-            return jsonify({
-                "Saturated Liquid": {
-                    "P (MPa)": round(water.P, 5),
-                    "h": round(water.h, 2),
-                    "s": round(water.s, 4),
-                    "u": round(water.u, 2),
-                    "v": round(water.v, 6)
-                },
-                "Saturated Vapor": {
-                    "P (MPa)": round(steam.P, 5),
-                    "h": round(steam.h, 2),
-                    "s": round(steam.s, 4),
-                    "u": round(steam.u, 2),
-                    "v": round(steam.v, 6)
-                }
-            })
 
         else:
             return jsonify({'error': 'Invalid input type. Use "P" or "T".'})
+
+        # Calculate derived properties
+        results = {
+            "Saturated Liquid": {
+                "T (°C)": round(water.T - 273.15, 2),
+                "P (MPa)": round(water.P, 5),
+                "h (kJ/kg)": round(water.h, 2),
+                "s (kJ/kg·K)": round(water.s, 4),
+                "u (kJ/kg)": round(water.u, 2),
+                "v (m³/kg)": round(water.v, 6),
+                "rho (kg/m³)": round(1 / water.v, 2),
+                "mu (Pa·s)": round(water.mu, 6),
+                "nu (m²/s)": round(water.mu * water.v, 9),
+                "x (quality)": 0.0
+            },
+            "Saturated Vapor": {
+                "T (°C)": round(steam.T - 273.15, 2),
+                "P (MPa)": round(steam.P, 5),
+                "h (kJ/kg)": round(steam.h, 2),
+                "s (kJ/kg·K)": round(steam.s, 4),
+                "u (kJ/kg)": round(steam.u, 2),
+                "v (m³/kg)": round(steam.v, 6),
+                "rho (kg/m³)": round(1 / steam.v, 2),
+                "mu (Pa·s)": round(steam.mu, 6),
+                "nu (m²/s)": round(steam.mu * steam.v, 9),
+                "x (quality)": 1.0
+            }
+        }
+
+        return jsonify(results)
 
     except Exception as e:
         return jsonify({'error': str(e)})

@@ -129,63 +129,90 @@
   btnPT.onclick = () => setMode("pt");
 
   form.onsubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    let inputType = "";
-    let value = "";
+  let inputType = "";
+  let value = "";
 
-    if (mode === "pressure") {
-      inputType = "P";
-      value = parseFloat(document.getElementById("pressureValue").value);
-    } else if (mode === "temperature") {
-      inputType = "T";
-      value = parseFloat(document.getElementById("temperatureValue").value);
-    } else {
-      alert("Mode PT belum didukung backend.");
+  if (mode === "pressure") {
+    inputType = "P";
+    value = parseFloat(document.getElementById("pressureValue").value);
+  } else if (mode === "temperature") {
+    inputType = "T";
+    value = parseFloat(document.getElementById("temperatureValue").value);
+  } else {
+    alert("Mode PT belum didukung backend.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}?input=${inputType}&value=${value}`);
+    const data = await res.json();
+
+    if (data.error) {
+      resultBody.innerHTML = `
+        <tr><td colspan="3" class="text-red-600 p-2">${data.error}</td></tr>`;
+      resultDiv.classList.remove("hidden");
       return;
     }
 
-    try {
-      const res = await fetch(`${API_URL}?input=${inputType}&value=${value}`);
-      const data = await res.json();
+        // Ambil data hasil dari backend
+    const liquid = data["Saturated Liquid"] || data.liquid || data.saturated_liquid || {};
+    const vapor = data["Saturated Vapor"] || data.vapor || data.saturated_vapor || {};
 
-      if (data.error) {
-        resultBody.innerHTML = `
-          <tr><td colspan="3" class="text-red-600 p-2">${data.error}</td></tr>`;
-        resultDiv.classList.remove("hidden");
-        return;
+    console.log("API response:", data); // buka devtools -> Console untuk lihat struktur
+
+    // helper: ambil property dengan beberapa kemungkinan key
+    function getProp(obj, candidates) {
+      for (const k of candidates) {
+        if (obj && Object.prototype.hasOwnProperty.call(obj, k)) return obj[k];
       }
-
-      // Render hasil tabel
-      const rows = [
-        ["T (°C) - Saturated Liquid", data["Saturated Liquid"]["T (C)"], "°C"],
-        ["T (°C) - Saturated Vapor", data["Saturated Vapor"]["T (C)"], "°C"],
-        ["P (MPa)", data["Saturated Vapor"]["P (MPa)"], "MPa"],
-        ["h (liquid)", data["Saturated Liquid"]["h"], "kJ/kg"],
-        ["h (vapor)", data["Saturated Vapor"]["h"], "kJ/kg"],
-        ["s (liquid)", data["Saturated Liquid"]["s"], "kJ/kg·K"],
-        ["s (vapor)", data["Saturated Vapor"]["s"], "kJ/kg·K"],
-        ["u (liquid)", data["Saturated Liquid"]["u"], "kJ/kg"],
-        ["u (vapor)", data["Saturated Vapor"]["u"], "kJ/kg"],
-        ["v (liquid)", data["Saturated Liquid"]["v"], "m³/kg"],
-        ["v (vapor)", data["Saturated Vapor"]["v"], "m³/kg"],
-      ];
-
-      resultBody.innerHTML = rows.map(r => `
-        <tr>
-          <td class="border p-2">${r[0]}</td>
-          <td class="border p-2 text-right">${r[1]}</td>
-          <td class="border p-2">${r[2]}</td>
-        </tr>
-      `).join("");
-      resultDiv.classList.remove("hidden");
-
-    } catch (err) {
-      resultBody.innerHTML = `
-        <tr><td colspan="3" class="text-red-600 p-2">${err.message}</td></tr>`;
-      resultDiv.classList.remove("hidden");
+      return '—';
     }
-  };
+
+    // now pick temperature / pressure keys with fallbacks
+    let rows = [];
+
+    if (mode === "pressure") {
+      const t_liq = getProp(liquid, ['T (C)', 'T (°C)', 'T', 'temperature', 'temp']);
+      const t_vap = getProp(vapor,  ['T (C)', 'T (°C)', 'T', 'temperature', 'temp']);
+      rows.push(["T (°C) - Saturated Liquid", t_liq, "°C"]);
+      rows.push(["T (°C) - Saturated Vapor", t_vap, "°C"]);
+    } else if (mode === "temperature") {
+      const p_liq = getProp(liquid, ['P (MPa)', 'P', 'pressure']);
+      const p_vap = getProp(vapor,  ['P (MPa)', 'P', 'pressure']);
+      rows.push(["P (MPa) - Saturated Liquid", p_liq, "MPa"]);
+      rows.push(["P (MPa) - Saturated Vapor", p_vap, "MPa"]);
+    }
+
+    // entalpi, entropi, internal energy, specific volume (dengan fallback nama)
+    rows.push(["h (liquid)", getProp(liquid, ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
+    rows.push(["h (vapor)",  getProp(vapor,  ['h','h (kJ/kg)','enthalpy']), "kJ/kg"]);
+    rows.push(["s (liquid)", getProp(liquid, ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
+    rows.push(["s (vapor)",  getProp(vapor,  ['s','s (kJ/kg·K)','entropy']), "kJ/kg·K"]);
+    rows.push(["u (liquid)", getProp(liquid, ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
+    rows.push(["u (vapor)",  getProp(vapor,  ['u','u (kJ/kg)','internal_energy']), "kJ/kg"]);
+    rows.push(["v (liquid)", getProp(liquid, ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
+    rows.push(["v (vapor)",  getProp(vapor,  ['v','v (m³/kg)','specific_volume']), "m³/kg"]);
+
+    // Render hasil ke tabel
+    resultBody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="border p-2">${r[0]}</td>
+        <td class="border p-2 text-right">${r[1]}</td>
+        <td class="border p-2">${r[2]}</td>
+      </tr>
+    `).join("");
+    resultDiv.classList.remove("hidden");
+
+
+  } catch (err) {
+    resultBody.innerHTML = `
+      <tr><td colspan="3" class="text-red-600 p-2">${err.message}</td></tr>`;
+    resultDiv.classList.remove("hidden");
+  }
+};
+
 </script>
 
 
