@@ -25,34 +25,23 @@ def steam_properties():
             water = IAPWS97(T=T, x=0)
             steam = IAPWS97(T=T, x=1)
         else:
-            return jsonify({'error': 'Gunakan input=P (bar) atau T (°C)'})
-
-        data = {
-            'Input': input_type,
-            'Value': value,
-            'Saturated Liquid': {
-                'T (°C)': round(water.T - 273.15, 2),
-                'P (bar)': round(water.P * 10, 3),
-                'h (kJ/kg)': round(water.h, 2),
-                's (kJ/kg·K)': round(water.s, 4),
-                'u (kJ/kg)': round(water.u, 2),
-                'v (m³/kg)': round(water.v, 6),
-                'ρ (kg/m³)': round(1 / water.v, 2),
-                'x': 0
-            },
-            'Saturated Vapor': {
-                'T (°C)': round(steam.T - 273.15, 2),
-                'P (bar)': round(steam.P * 10, 3),
-                'h (kJ/kg)': round(steam.h, 2),
-                's (kJ/kg·K)': round(steam.s, 4),
-                'u (kJ/kg)': round(steam.u, 2),
-                'v (m³/kg)': round(steam.v, 6),
-                'ρ (kg/m³)': round(1 / steam.v, 2),
-                'x': 1
-            }
-        }
-
-        return jsonify(data)
+           return jsonify({
+    "Saturated Liquid": {
+        "T (C)": round(water.T - 273.15, 2),
+        "h": round(water.h, 2),
+        "s": round(water.s, 4),
+        "u": round(water.u, 2),
+        "v": round(water.v, 6)
+    },
+    "Saturated Vapor": {
+        "T (C)": round(steam.T - 273.15, 2),
+        "P (MPa)": round(steam.P, 5),
+        "h": round(steam.h, 2),
+        "s": round(steam.s, 4),
+        "u": round(steam.u, 2),
+        "v": round(steam.v, 6)
+    }
+})  
 
     except Exception as e:
         return jsonify({'error': str(e)})
