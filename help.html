@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SteamTables Add-In Help</title>
+  <style>
+    body {
+      font-family: Segoe UI, Arial, sans-serif;
+      margin: 2em auto;
+      max-width: 900px;
+      line-height: 1.6;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #004578;
+    }
+    code {
+      background: #eee;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 1.5em;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 1em;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background: #f0f0f0;
+      text-align: left;
+    }
+    footer {
+      text-align: center;
+      color: #777;
+      font-size: 0.9em;
+      margin-top: 3em;
+    }
+  </style>
+</head>
+<body>
+  <h1>SteamTables Add-In for Excel</h1>
+  <p>
+    <strong>SteamTables Add-In</strong> provides thermodynamic properties of water and steam directly in Excel.
+    You can use its functions to calculate pressure, temperature, enthalpy, entropy, and more — both for
+    <em>saturated</em> and <em>superheated</em> regions.
+  </p>
+
+  <div class="section">
+    <h2>📦 Installation</h2>
+    <ol>
+      <li>Copy the entire folder <code>SteamTablesAddIn</code> to your computer.</li>
+      <li>In Excel, go to <strong>File → Options → Add-ins → Manage: Excel Add-ins → Go…</strong></li>
+      <li>Click <strong>Browse</strong> and select <code>SteamTables.xll</code>.</li>
+      <li>After enabling, you will see the <strong>SteamTables</strong> tab appear in your Excel ribbon.</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>🧮 Available Functions</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>=ST_Tsat(P)</code></td>
+          <td>Returns saturation temperature (°C) for a given pressure (bar).</td>
+          <td><code>=ST_Tsat(10)</code> → 179.9 °C</td>
+        </tr>
+        <tr>
+          <td><code>=ST_Psat(T)</code></td>
+          <td>Returns saturation pressure (bar) for a given temperature (°C).</td>
+          <td><code>=ST_Psat(200)</code> → 15.54 bar</td>
+        </tr>
+        <tr>
+          <td><code>=ST_Hpt(P, T)</code></td>
+          <td>Returns specific enthalpy (kJ/kg) for given pressure (bar) and temperature (°C).</td>
+          <td><code>=ST_Hpt(10, 250)</code></td>
+        </tr>
+        <tr>
+          <td><code>=ST_Spt(P, T)</code></td>
+          <td>Returns specific entropy (kJ/kg·K) for given pressure (bar) and temperature (°C).</td>
+          <td><code>=ST_Spt(10, 250)</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>⚙️ Ribbon Menu</h2>
+    <p>
+      The add-in adds a <strong>SteamTables</strong> tab to the Excel ribbon.  
+      It includes buttons to:
+    </p>
+    <ul>
+      <li>Open this Help page</li>
+      <li>Access Steam property calculators</li>
+      <li>Switch between single-phase and two-phase flow tools (if included)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>💡 Tips</h2>
+    <ul>
+      <li>All functions work in both cell formulas and VBA macros.</li>
+      <li>Use consistent units: pressure in <code>bar</code>, temperature in <code>°C</code>.</li>
+      <li>For two-phase states, specify quality (x) between 0–1 when applicable.</li>
+    </ul>
+  </div>
+
+  <footer>
+    <p>© 2025 SteamTables Add-In — Created with Excel-DNA and VB.NET</p>
+    <p><a href="https://steamtables.my.id" target="_blank">https://steamtables.my.id</a></p>
+  </footer>
+</body>
+</html>
