@@ -94,20 +94,14 @@
     <!-- Input 2 -->
     <div class="flex items-center gap-2">
       <label class="w-24 font-medium">Input 2</label>
-      <select id="input1SelectSuperheated" class="border rounded p-2">
-  <option value="pressure">Pressure</option>
-  <option value="temperature">Temperature</option>
-</select>
-
-<select id="input2SelectSuperheated" class="border rounded p-2">
-  <option value="temperature">Temperature</option>
-  <option value="enthalpy">Enthalpy</option>
-  <option value="entropy">Entropy</option>
-  <option value="specific_volume">Specific Volume</option>
-  <option value="internal_energy">Internal Energy</option>
-  <option value="steam_quality">Steam Quality</option>
-</select>
-
+      <select id="input2Select" class="border rounded p-2 w-44">
+        <option value="temperature">Temperature</option>
+        <option value="steam_quality">Steam Quality</option>
+        <option value="specific_volume">Specific Volume</option>
+        <option value="enthalpy">Enthalpy</option>
+        <option value="entropy">Entropy</option>
+        <option value="internal_energy">Internal Energy</option>
+      </select>
       <input id="input2Value" type="number" step="any" value="100" class="border rounded p-2 w-32" />
       <select id="input2Unit" class="border rounded p-2">
         <option>°C</option>
@@ -295,12 +289,13 @@ form.onsubmit = async (e) => {
       url += `?input=T&value=${T}`;
     }
     else if (mode === "pt") {
-  // 🔧 Ambil semua input dari blok Superheated langsung (tidak pakai variabel superheatedBlock)
-  const input1Select = document.getElementById("input1SelectSuperheated");
-  const input2Select = document.getElementById("input2SelectSuperheated");
-  const input1Value = document.getElementById("input1Value");
-  const input2Value = document.getElementById("input2Value");
-
+  // 🔧 Ambil semua input dari blok superheated agar tidak bentrok dengan elemen lain
+  const superheatedBlock = document.getElementById("superheatedInputs");
+  const input1Select = superheatedBlock.querySelector("#input1Select");
+  const input2Select = superheatedBlock.querySelector("#input2Select");
+  const input1Value = superheatedBlock.querySelector("#input1Value");
+  const input2Value = superheatedBlock.querySelector("#input2Value");
+  
   const prop1 = input1Select.value.trim().toLowerCase();
   const prop2 = input2Select.value.trim().toLowerCase();
   const val1 = parseFloat(input1Value.value);
@@ -350,7 +345,6 @@ form.onsubmit = async (e) => {
 
   console.log("🚀 URL dikirim:", url);
 }
-
 
 
 
