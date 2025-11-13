@@ -132,8 +132,16 @@
               <label class="w-28 font-medium">Pressure</label>
               <input id="pressureValue" type="number" step="any" value="1" class="border rounded p-2 w-36" />
               <select id="pressureUnit" class="border rounded p-2">
-                <option>bar</option>
-                <option>MPa</option>
+                <option value="bar">bar</option>
+                <option value="bar g">bar g</option>
+                <option value="kpa">kPa</option>
+                <option value="kpa g">kPa g</option>
+                <option value="mpa">MPa</option>
+                <option value="mpa g">MPa g</option>
+                <option value="kg/cm2">kg/cm²</option>
+                <option value="kg/cm2 g">kg/cm² g</option>
+                <option value="psi">psi</option>
+                <option value="psi g">psi g</option>
               </select>
             </div>
 
@@ -142,11 +150,11 @@
               <label class="w-28 font-medium">Temperature</label>
               <input id="temperatureValue" type="number" step="any" value="100" class="border rounded p-2 w-36" />
               <select id="temperatureUnit" class="border rounded p-2">
-                <option>°C</option>
-                <option>K</option>
-              </select>
+                  <option value="C">°C</option>
+                  <option value="F">°F</option>
+                </select>
             </div>
-
+            
             <!-- Superheated / two-property -->
             <div id="superheatedInputs" class="space-y-3 hidden">
               <div class="flex items-center gap-3">
@@ -332,6 +340,62 @@
     input1Select.onchange = () => { if (unit1) unit1.textContent = unitMapInput1[input1Select.value] || "-"; };
     input2Select.onchange = () => { if (unit2) unit2.textContent = unitMapInput2[input2Select.value] || "-"; };
 
+      // --- Konversi Pressure ke MPa (absolute) ---
+function convertPressureToMPa(value, unit) {
+  if (isNaN(value)) return 0;
+  const conv = {
+    "bar": value / 10,
+    "bar g": (value + 1.01325) / 10,
+    "kpa": value / 1000,
+    "kpa g": (value + 101.325) / 1000,
+    "mpa": value,
+    "mpa g": value + 0.101325,
+    "kg/cm2": value * 0.0980665,
+    "kg/cm2 g": (value + 1.03323) * 0.0980665,
+    "psi": value * 0.00689476,
+    "psi g": (value + 14.6959) * 0.00689476
+  };
+  return conv[unit.toLowerCase()] ?? value / 10;
+}
+
+// --- Konversi Temperature ke °C ---
+function convertTemperatureToC(value, unit) {
+  if (isNaN(value)) return 0;
+  unit = unit.toUpperCase().trim();
+  if (unit === "F") return (value - 32) * 5 / 9;
+  return value; // default °C
+}
+// 🔧 Perbarui satuan otomatis & range Steam Quality
+  input2Select.addEventListener("change", () => {
+    const val = input2Select.value;
+    const input2 = document.getElementById("input2Value");
+    const unitLabel = document.getElementById("unit2");
+
+    if (val === "steam_quality") {
+      input2.min = 0;
+      input2.max = 100;
+      input2.step = "any";
+      input2.placeholder = "0–100";
+      unitLabel.textContent = "%";
+    } else {
+      input2.removeAttribute("min");
+      input2.removeAttribute("max");
+      input2.placeholder = "";
+      unitLabel.textContent = unitMapInput2[val] || "-";
+    }
+  });
+
+  // ✅ Validasi steam quality 0–100
+  function validateSteamQuality() {
+    const prop2 = document.getElementById("input2Select").value;
+    const val2 = parseFloat(document.getElementById("input2Value").value);
+    if (prop2 === "steam_quality" && (val2 < 0 || val2 > 100)) {
+      alert("Steam quality harus di antara 0–100%");
+      return false;
+    }
+    return true;
+  }
+
     // submit handler
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -340,13 +404,16 @@
         let url = API_URL;
 
         if (mode === "pressure") {
-          const P = parseFloat(document.getElementById("pressureValue").value);
-          url += `?input=P&value=${P}`;
-          resultsHeading.textContent = `Saturated (P = ${P})`;
-        } else if (mode === "temperature") {
-          const T = parseFloat(document.getElementById("temperatureValue").value);
-          url += `?input=T&value=${T}`;
-          resultsHeading.textContent = `Saturated (T = ${T})`;
+              const P = parseFloat(document.getElementById("pressureValue").value);
+              const unit = document.getElementById("pressureUnit").value;
+              const P_MPa = convertPressureToMPa(P, unit);
+              url += `?input=P&value=${P_MPa * 10}`; // API pakai bar abs
+            }
+            else if (mode === "temperature") {
+              const T = parseFloat(document.getElementById("temperatureValue").value);
+              const unit = document.getElementById("temperatureUnit").value;
+              const T_C = convertTemperatureToC(T, unit);
+              url += `?input=T&value=${T_C}`;
         } else if (mode === "pt") {
           const prop1 = document.getElementById("input1Select").value;
           const prop2 = document.getElementById("input2Select").value;
@@ -363,6 +430,11 @@
           if (combo.startsWith("P")) url += `&pressure=${val1}`;
           else url += `&temperature=${val1}`;
 
+          // ubah % jadi 0–1 sebelum dikirim
+let xValue = val2;
+if (prop2 === "steam_quality") {
+  xValue = val2 / 100; // konversi ke fraksi
+}
           // second param
           switch (prop2) {
             case "temperature": url += `&temperature=${val2}`; break;
@@ -468,27 +540,152 @@
     This Online Steam Calculator was made after many other free online steam properties calculators lacked the set of inputs I needed to solve exercises for my Thermodynamics class. As a Mechanical Engineer trying to get into the world of web development and programming, I thought it would be a great project to practice coding and also offer a solution to my problem for free and to everyone.
   </p>
 </div>
-<!-- ==== Footer Section (Tambahan Aman) ==== -->
-<footer class="bg-gray-900 text-gray-300 py-4 border-t border-gray-700 w-full">
-<div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between px-6 space-y-3 md:space-y-0">
-<div class="text-center md:text-left">
-<p class="text-sm">
-Developed by: <span class="font-semibold text-white">Cecep Ependi</span>
-</p>
-<a href="mailto:cefaigan71@gmail.com" class="text-blue-400 text-sm hover:underline">
-cefaigan71@gmail.com
-</a>
-</div>
+<!-- ======= FOOTER ======= -->
+<footer class="w-full bg-black text-gray-300 py-6 mt-10 relative">
+  <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
 
+    <!-- Kiri -->
+    <div class="text-sm">
+      <p>© 2025 <span class="text-blue-400 font-semibold">Steam Property Calculator</span>. All rights reserved.</p>
+      <p class="text-gray-400 text-xs">Developed by <span class="text-blue-400">Cecep Ependi</span></p>
+    </div>
 
-<div class="flex gap-4 items-center">
-<a href="mailto:cefaigan71@gmail.com" title="Email me">
-<img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png"
-alt="Gmail" class="w-6 h-6 hover:scale-110 transition-transform duration-200">
-</a>
-</div>
-</div>
+    <!-- Kanan -->
+    <div class="flex gap-5 text-sm">
+      <!-- Gmail -->
+      <a href="mailto:cefaigan71@gmail.com"
+         class="flex items-center gap-2 hover:text-red-400 transition duration-300">
+        <i class="fa-solid fa-envelope text-lg"></i>
+        Gmail
+      </a>
+
+      <!-- Upwork -->
+      <a href="https://www.upwork.com/freelancers/~01a2b345cdef67890" target="_blank"
+         class="flex items-center gap-2 hover:text-green-400 transition duration-300">
+        <i class="fa-brands fa-upwork text-lg"></i>
+        Upwork
+      </a>
+
+      <!-- LinkedIn -->
+      <a href="https://www.linkedin.com/in/cecep-e-ependi" target="_blank"
+         class="flex items-center gap-2 hover:text-blue-400 transition duration-300">
+        <i class="fa-brands fa-linkedin text-lg"></i>
+        LinkedIn
+      </a>
+    </div>
+  </div>
+
+  <!-- Tombol Back to Top -->
+  <button id="backToTop"
+    class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition duration-300">
+    <i class="fa-solid fa-arrow-up"></i>
+  </button>
 </footer>
+
+<!-- ✅ Tambahkan Font Awesome -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  integrity="sha512-RXf+QSDCUQs5uwxO6kXbB1dq3IKhQ6F2zD5C1f9RtP6TjZ0kU6fXGf8hHk4z0zT1R+zJrRjyK1QzYw8y5f+5rQ=="
+  crossorigin="anonymous"
+  referrerpolicy="no-referrer"
+/>
+
+<!-- Tombol Back to Top Script -->
+<script>
+  const backToTopBtn = document.getElementById("backToTop");
+
+  // Munculkan tombol saat scroll ke bawah
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 200) {
+      backToTopBtn.classList.remove("hidden");
+    } else {
+      backToTopBtn.classList.add("hidden");
+    }
+  });
+
+  // Scroll ke atas saat tombol diklik
+  backToTopBtn.addEventListener("click", () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  });
+</script>
+<script>
+// === 🔥 Real-time Conversion Hint (Pressure & Temperature) ===
+
+// Buat elemen tampilan konversi
+const pressureHint = document.createElement("div");
+pressureHint.className = "text-sm text-gray-500 mt-1";
+document.getElementById("pressureInput").appendChild(pressureHint);
+
+const temperatureHint = document.createElement("div");
+temperatureHint.className = "text-sm text-gray-500 mt-1";
+document.getElementById("temperatureInput").appendChild(temperatureHint);
+
+// --- Fungsi Konversi Pressure ---
+function convertPressure(val, unit) {
+  if (isNaN(val)) return "";
+  let bara = 0;
+  switch (unit.toLowerCase()) {
+    case "bar": bara = val; break;
+    case "bar g": bara = val + 1.01325; break;
+    case "kpa": bara = val / 100; break;
+    case "kpa g": bara = val / 100 + 1.01325; break;
+    case "mpa": bara = val * 10; break;
+    case "mpa g": bara = val * 10 + 1.01325; break;
+    case "kg/cm2": bara = val * 0.980665; break;
+    case "kg/cm2 g": bara = val * 0.980665 + 1.01325; break;
+    case "psi": bara = val * 0.0689476; break;
+    case "psi g": bara = val * 0.0689476 + 1.01325; break;
+  }
+  return `≈ ${bara.toFixed(3)} bar abs`;
+}
+
+// --- Fungsi Konversi Temperature ---
+function convertTemperature(val, unit) {
+  if (isNaN(val)) return "";
+  let celsius = val;
+  const u = unit.replace(/[^a-zA-Z]/g, "").toLowerCase(); // normalisasi unit
+
+  if (u === "f") { // Fahrenheit ke Celsius
+    celsius = (val - 32) * 5 / 9;
+  } else if (u === "k") { // kalau nanti mau tambah Kelvin
+    celsius = val - 273.15;
+  }
+
+  return `≈ ${celsius.toFixed(2)} °C`;
+}
+
+
+// --- Event Listener Pressure ---
+document.getElementById("pressureValue").addEventListener("input", () => {
+  const val = parseFloat(document.getElementById("pressureValue").value);
+  const unit = document.getElementById("pressureUnit").value;
+  pressureHint.textContent = convertPressure(val, unit);
+});
+
+document.getElementById("pressureUnit").addEventListener("change", () => {
+  const val = parseFloat(document.getElementById("pressureValue").value);
+  const unit = document.getElementById("pressureUnit").value;
+  pressureHint.textContent = convertPressure(val, unit);
+});
+
+// --- Event Listener Temperature ---
+document.getElementById("temperatureValue").addEventListener("input", () => {
+  const val = parseFloat(document.getElementById("temperatureValue").value);
+  const unit = document.getElementById("temperatureUnit").value;
+  temperatureHint.textContent = convertTemperature(val, unit);
+});
+
+document.getElementById("temperatureUnit").addEventListener("change", () => {
+  const val = parseFloat(document.getElementById("temperatureValue").value);
+  const unit = document.getElementById("temperatureUnit").value;
+  temperatureHint.textContent = convertTemperature(val, unit);
+});
+</script>
+
 
 </body>
 </html>

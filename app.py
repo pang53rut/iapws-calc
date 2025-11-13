@@ -152,6 +152,19 @@ def steam_properties():
             S = float(entropy)
             st = find_state_by_property_T("s", T, S)
             results = {"Temperature & Entropy": format_state(st)}
+        # --- Mode P + X (Pressure + Steam Quality) ---
+        elif input_type == 'PX' and pressure and request.args.get('x') is not None:
+            P = float(pressure) / 10
+            x = float(request.args.get('x'))
+            st = IAPWS97(P=P, x=x)
+            results = {"Pressure & Quality": format_state(st)}
+
+        # --- Mode T + X (Temperature + Steam Quality) ---
+        elif input_type == 'TX' and temperature and request.args.get('x') is not None:
+            T = float(temperature) + 273.15
+            x = float(request.args.get('x'))
+            st = IAPWS97(T=T, x=x)
+            results = {"Temperature & Quality": format_state(st)}
 
         else:
             return jsonify({'error': 'Invalid input. Supported: P, T, PT, PH, PS, TH, TS'})
