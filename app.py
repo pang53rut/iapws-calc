@@ -103,9 +103,9 @@ def steam_properties():
                 "Pressure & Enthalpy": format_state(st),
                 "Steam Info": {
                     "Steam Quality (%)": round(x * 100, 2),
-                    "h_sat_liq (kJ/kg)": round(hf, 2),
-                    "h_sat_vap (kJ/kg)": round(hg, 2),
-                    "h_mix (wet steam, kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "Sat. Liq. (kJ/kg)": round(hf, 2),
+                    "Sat. Steam (kJ/kg)": round(hg, 2),
+                    "wet steam(kJ/kg)": round(hf + x * (hg - hf), 2)
                 }
             }
 
@@ -132,10 +132,10 @@ def steam_properties():
             results = {
                 "Pressure & Entropy": format_state(st),
                 "Steam Info": {
-                    "x (quality %)": round(x * 100, 2),
-                    "h_sat_liq (kJ/kg)": round(hf, 2),
-                    "h_sat_vap (kJ/kg)": round(hg, 2),
-                    "h_mix (wet steam, kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "Steam Quality (%)": round(x * 100, 2),
+                    "Sat. Liq. (kJ/kg)": round(hf, 2),
+                    "Sat. Steam (kJ/kg)": round(hg, 2),
+                    "wet steam(kJ/kg)": round(hf + x * (hg - hf), 2)
                 }
             }
 
