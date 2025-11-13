@@ -102,7 +102,7 @@ def steam_properties():
             results = {
                 "Pressure & Enthalpy": format_state(st),
                 "Steam Info": {
-                    "x (quality %)": round(x * 100, 2),
+                    "Steam Quality (%)": round(x * 100, 2),
                     "h_sat_liq (kJ/kg)": round(hf, 2),
                     "h_sat_vap (kJ/kg)": round(hg, 2),
                     "h_mix (wet steam, kJ/kg)": round(hf + x * (hg - hf), 2)

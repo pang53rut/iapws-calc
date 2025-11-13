@@ -1,385 +1,440 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="google-site-verification" content="1KT3zz5yO0bQl-CsIID692UcDS4-08I6uv_qkKbRmhY" />
-  <title>SteamTables|Online</title>
+  <meta charset="utf-8" />
+  <meta name="robots" content="index, follow">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="google-adsense-account" content="ca-pub-2054026110130288">
+  <meta name="yandex-verification" content="c59a18ae977faa9d" />
+    <meta property="og:title" content="SteamTables.my.id – Geothermal Steam Tables & Fluid Calculator">
+    <meta property="og:description" content="Calculate steam and water properties for geothermal systems.">
+    <meta property="og:url" content="https://steamtables.my.id/">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://steamtables.my.id/preview.png">
+  <title>Steam Property Calculator</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" type="image/png" href="logo.png" />
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "SteamTables Online Calculator",
+        "url": "https://steamtables.my.id/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "All",
+        "description": "Free web-based steam table calculator for water and steam thermodynamic properties."
+      }
+  </script>
+   <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="canonical" href="https://steamtables.my.id/" />
+    <!-- ✅ SEO META TAGS -->
+      <meta name="description" content="SteamTables Online Calculator — free web-based steam table calculator for water and steam thermodynamic properties, including enthalpy, entropy, temperature, pressure, and steam quality.">
+      <meta name="keywords" content="steam table, thermodynamics, water properties, enthalpy, entropy, pressure temperature, steam calculator, IAPWS, engineering tools, saturated vapor, saturated liquid">
+      <meta name="author" content="E. Cecep Ependi">
+      <!-- 🔗 Open Graph (untuk preview di WhatsApp / Facebook) -->
+      <meta property="og:title" content="SteamTables Online Calculator">
+      <meta property="og:description" content="Free online steam table calculator for thermodynamic properties of water and steam.">
+      <meta property="og:url" content="https://steamtables.my.id/">
+      <meta property="og:type" content="website">
+      <meta property="og:image" content="https://steamtables.my.id/logo.png">
+
+      <!-- 🐦 Twitter Card -->
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="SteamTables Online Calculator">
+      <meta name="twitter:description" content="Free online steam table calculator for water and steam thermodynamic properties.">
+      <meta name="twitter:image" content="https://steamtables.my.id/logo.png">
+  <style>
+    body { font-family: "Times New Roman", Times, serif; background: linear-gradient(135deg,#eef8fc,#e6f3fb); }
+    .card { background: white; border-radius: 14px; box-shadow: 0 8px 24px rgba(14,30,37,0.06); }
+    .fade-in { animation: fadeIn .36s ease both; }
+    @keyframes fadeIn { from {opacity:0; transform: translateY(6px)} to {opacity:1; transform:none} }
+    /* spinner */
+    .spinner { border: 3px solid rgba(0,0,0,0.06); border-top: 3px solid #0ea5a3; border-radius: 50%; width: 28px; height: 28px; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+     /* 🌐 Responsive tweaks untuk mobile */
+  @media (max-width: 640px) {
+    body { padding: 1rem; }
+    h1 { font-size: 1.6rem !important; line-height: 1.2; }
+    .card { padding: 1rem !important; }
+    .flex.items-center.gap-3 { flex-wrap: wrap; gap: 0.5rem; }
+
+    input[type="number"], select {
+      width: 100% !important;
+      max-width: none;
+    }
+
+    #btnCalc {
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Tombol mode (Pressure, Temp, Superheated) biar rapi di mobile */
+    .inline-flex.gap-2 {
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+    .inline-flex.gap-2 button {
+      flex: 1 1 45%;
+      min-width: 100px;
+    }
+
+    /* Sidebar pindah ke bawah di layar kecil */
+    .flex-col.lg\:flex-row {
+      flex-direction: column !important;
+    }
+    aside {
+      width: 100% !important;
+      position: relative;
+      top: 0;
+      margin-top: 1rem;
+    }
+
+    /* Tabel hasil biar bisa digeser di layar sempit */
+    table {
+      font-size: 0.85rem;
+    }
+    .overflow-x-auto {
+      overflow-x: scroll;
+    }
+  }
+  
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="min-h-screen py-8">
 
-  <!-- Header -->
-  <header class="bg-gradient-to-r from-teal-600 to-blue-700 text-white py-4 shadow">
-    <div class="max-w-5xl mx-auto text-left text-2xl font-semibold">
-      SteamTables.Online.Calculator
-    </div>
-  </header>
+  <div class="max-w-6xl mx-auto px-4 lg:px-0">
+    <!-- header -->
+    <header class="mb-6 text-center">
+      <h1 class="text-3xl md:text-4xl font-bold text-sky-800">Steam Property Calculator</h1>
+      <p class="text-sm text-sky-600 mt-1">Based on IAPWS-97 — Industrial steam property calculator</p>
+    </header>
 
-  <main class="max-w-5xl mx-auto mt-8 flex flex-col lg:flex-row gap-6">
-    <!-- Main Content -->
-    <section class="flex-1 space-y-6">
+    <!-- main layout: left content + right sidebar -->
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-      <!-- Input Section -->
-      <div class="bg-white rounded-2xl shadow p-6" style="font-family: 'Times New Roman', Times, serif;">
-        <h2 class="text-xl mb-4">Input:</h2>
-        
-        <!-- Mode Buttons -->
-        <div class="flex flex-wrap gap-2 mb-4 bg-gray-50 -mx-6 px-6 py-4 border border-gray-200">
-          <button id="btnPressure" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl bg-sky-700 text-white hover:text-white">Pressure</button>
-          <button id="btnTemperature" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl hover:text-white">Temperature</button>
-          <button id="btnPT" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl hover:text-white">Superheated</button>
+      <!-- LEFT: main calculator (flex-1) -->
+      <main class="flex-1">
+        <div class="card p-6 mb-4 fade-in">
+          <h2 class="text-lg font-semibold text-sky-800 mb-3">Input:</h2>
+
+          <!-- mode buttons -->
+          <div class="bg-sky-50 p-3 rounded-md border border-sky-100 mb-4">
+            <div class="inline-flex gap-2">
+              <button id="btnPressure" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl bg-sky-700 text-white hover:text-white">Pressure</button>
+              <button id="btnTemperature" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl hover:text-white">Temperature</button>
+              <button id="btnPT" class="px-4 py-2 border rounded-lg hover:bg-sky-700 shadow-xl hover:text-white">Superheated</button>
+            </div>
+          </div>
+
+          <form id="inputForm" class="space-y-4">
+            <!-- Pressure input -->
+            <div id="pressureInput" class="flex items-center gap-3">
+              <label class="w-28 font-medium">Pressure</label>
+              <input id="pressureValue" type="number" step="any" value="1" class="border rounded p-2 w-36" />
+              <select id="pressureUnit" class="border rounded p-2">
+                <option>bar</option>
+                <option>MPa</option>
+              </select>
+            </div>
+
+            <!-- Temperature input -->
+            <div id="temperatureInput" class="flex items-center gap-3 hidden">
+              <label class="w-28 font-medium">Temperature</label>
+              <input id="temperatureValue" type="number" step="any" value="100" class="border rounded p-2 w-36" />
+              <select id="temperatureUnit" class="border rounded p-2">
+                <option>°C</option>
+                <option>K</option>
+              </select>
+            </div>
+
+            <!-- Superheated / two-property -->
+            <div id="superheatedInputs" class="space-y-3 hidden">
+              <div class="flex items-center gap-3">
+                <!-- <label class="w-28 font-medium">Input 1</label> -->
+                <select id="input1Select" class="border rounded p-2 w-44">
+                  <option value="pressure">Pressure</option>
+                  <option value="temperature">Temperature</option>
+                </select>
+                <input id="input1Value" type="number" step="any" value="1" class="border rounded p-2 w-36" />
+                <span id="unit1" class="text-gray-600">bar</span>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <!-- <label class="w-28 font-medium">Input 2</label> -->
+                <select id="input2Select" class="border rounded p-2 w-52">
+                  <option value="temperature">Temperature</option>
+                  <option value="enthalpy">Enthalpy</option>
+                  <option value="entropy">Entropy</option>
+                  <option value="specific_volume">Specific Volume</option>
+                  <option value="internal_energy">Internal Energy</option>
+                  <option value="steam_quality">Steam Quality</option>
+                </select>
+                <input id="input2Value" type="number" step="any" value="100" class="border rounded p-2 w-36" />
+                <span id="unit2" class="text-gray-600">°C</span>
+              </div>
+            </div>
+
+            <div class="mt-2">
+              <button id="btnCalc" type="submit" class="border border-green-600 bg-green-200 hover:bg-green-700 hover:text-white px-5 py-2 rounded-lg shadow-xl">Calculate</button>
+              <span id="loading" class="inline-flex items-center gap-2 ml-3 opacity-0" aria-hidden>
+                <span class="spinner"></span><span class="text-sm text-sky-600">Calculating...</span>
+              </span>
+            </div>
+          </form>
+
+          <p id="helpText" class="text-center text-gray-500 mt-6">Please input parameters and click <strong>Calculate</strong> to see results.</p>
         </div>
 
-        <!-- Dynamic Input Fields -->
-        <form id="inputForm" class="space-y-3">
-          <!-- Pressure Input -->
-          <div id="pressureInput" class="flex items-center gap-2">
-            <label class="w-24 font-medium">Pressure</label>
-            <input id="pressureValue" type="number" step="any" value="1" class="border rounded p-2 w-32" />
-            <select id="pressureUnit" class="border rounded p-2">
-              <option>bar</option>
-              <option>MPa</option>
-              <option>kPa</option>
-            </select>
+        <!-- results card -->
+        <div id="resultsCard" class="card overflow-hidden hidden fade-in">
+          <div class="p-4 bg-sky-700 text-white">
+            <h3 id="resultsHeading" class="text-lg font-semibold">Results</h3>
           </div>
-
-          <div id="temperatureInput" class="flex items-center gap-2 hidden">
-            <label class="w-24 font-medium">Temperature</label>
-            <input id="temperatureValue" type="number" step="any" value="100" class="border rounded p-2 w-32" />
-            <select id="temperatureUnit" class="border rounded p-2">
-              <option>°C</option>
-              <option>K</option>
-            </select>
+          <div class="p-4">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-sky-50">
+                  <tr>
+                    <th class="p-2 border text-left">Property</th>
+                    <th class="p-2 border text-left">Value</th>
+                    <th class="p-2 border text-left">Unit</th>
+                  </tr>
+                </thead>
+                <tbody id="resultTableBody" class="text-gray-800"></tbody>
+              </table>
+            </div>
           </div>
+        </div>
 
-          <!-- 🔹 Tambahan: Input Superheated (hanya muncul di mode pt) -->
-  <div id="superheatedInputs" class="hidden space-y-3">
-    <!-- Input 1 -->
-<div class="flex items-center gap-2">
-  <label class="w-24 font-medium">Input 1</label>
-  <select id="input1Select" class="border rounded p-2">
-    <option value="pressure">Pressure</option>
-    <option value="temperature">Temperature</option>
-  </select>
-  <input id="input1Value" type="number" step="any" value="1" class="border rounded p-2 w-32" />
-  <span class="text-gray-600" id="unit1">bar</span>
-</div>
+        <!-- footer -->
+        <footer class="text-center text-xs text-gray-500 mt-3">
+          © 2025 SteamTables.my.id — Powered by IAPWS-IF97
+        </footer>
+      </main>
 
-<!-- Input 2 -->
-<div class="flex items-center gap-2 mt-2">
-  <label class="w-24 font-medium">Input 2</label>
-  <!-- Untuk mode Pressure -->
-<select id="input2SelectPressure" class="border rounded p-2 hidden"></select>
+      <!-- RIGHT: sidebar (ikut scroll) -->
+      <aside class="w-full lg:w-64 space-y-4">
+        <div class="card p-4">
+          <h4 class="text-lg font-semibold mb-1">Feedback</h4>
+          <p class="text-sm text-gray-700 mb-2">Have suggestions or found bugs?</p>
+          <a href="mailto:cefaigan71@gmail.com?subject=Steam%20Table%20Feedback&body=Tuliskan%20feedback%20anda..."
+             class="text-sky-700 hover:underline text-sm">Send Feedback</a>
+        </div>
 
-<!-- Untuk mode Temperature -->
-<select id="input2SelectTemperature" class="border rounded p-2 hidden"></select>
+        <div class="card p-4">
+          <h4 class="text-lg font-semibold mb-2">Steam Tables</h4>
+          <a href="https://drive.google.com/file/d/1dG8FctY4lZSmRaLsl6NLPBSv9MNArqvF/view?usp=sharing"
+             class="text-sky-700 hover:underline text-sm">💾 Excel Add-ins</a>
+        </div>
 
-<!-- Untuk mode Superheated -->
-<select id="input2SelectSuperheated" class="border rounded p-2">
-  <option value="temperature">Temperature</option>
-  <option value="enthalpy">Enthalpy</option>
-  <option value="entropy">Entropy</option>
-  <option value="specific_volume">Specific Volume</option>
-  <option value="internal_energy">Internal Energy</option>
-  <option value="steam_quality">Steam Quality</option>
-</select>
-
-  <input id="input2Value" type="number" step="any" value="100" class="border rounded p-2 w-32" />
-</div>
-
-
-
-    <!-- Input 2 -->
-    <div class="flex items-center gap-2">
-      <label class="w-24 font-medium">Input 2</label>
-      <select id="input2Select" class="border rounded p-2 w-44">
-        <option value="temperature">Temperature</option>
-        <option value="steam_quality">Steam Quality</option>
-        <option value="specific_volume">Specific Volume</option>
-        <option value="enthalpy">Enthalpy</option>
-        <option value="entropy">Entropy</option>
-        <option value="internal_energy">Internal Energy</option>
-      </select>
-      <input id="input2Value" type="number" step="any" value="100" class="border rounded p-2 w-32" />
-      <select id="input2Unit" class="border rounded p-2">
-        <option>°C</option>
-        <option>K</option>
-        <option>kJ/kg</option>
-        <option>m³/kg</option>
-      </select>
+        <div class="card p-4">
+          <h4 class="text-lg font-semibold mb-2">Buy me a coffee!</h4>
+          <p class="text-sm text-gray-700 mb-3">Like this project? Support development:</p>
+          <div class="flex gap-2 mb-2">
+            <a href="https://paypal.me/cefaigan/3" target="_blank" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">$3</a>
+            <a href="https://paypal.me/cefaigan/5" target="_blank" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">$5</a>
+            <a href="https://paypal.me/cefaigan/10" target="_blank" class="px-3 py-1 border rounded-md text-sm hover:bg-gray-50">$10</a>
+          </div>
+          <div class="flex flex-col gap-1 text-sm">
+            <a href="https://paypal.me/cefaigan" target="_blank" class="text-sky-700 hover:underline">Donate via PayPal</a>
+            <a href="https://saweria.co/cecep81" target="_blank" class="text-orange-600 hover:underline">Donate via Saweria (ID)</a>
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
-          <button type="submit" class="border border-green-600 bg-green-200 hover:bg-green-700 hover:text-white px-5 py-2 rounded-lg shadow-xl">
-            Submit
-          </button>
-        </form>
-      </div>
 
-      <!-- Results Section Placeholder sebelum result keluar -->
-          <div id="preInfo" class="border rounded-lg overflow-hidden bg-white shadow-sm" style="font-family: 'Times New Roman', Times, serif;">
-            <div class="bg-gray-100 px-4 py-2 border-b rounded-t-lg">
-            <h2 class="text-lg text-gray-800">Results:</h2></div>
-            <!-- Isi hasil -->
-          <div class="bg-white px-4 py-3 text-gray-700">
-            Please, input values to show results.
-          </div>
-    </div>
-      <!-- Results Section -->
-<div id="results" class="bg-white rounded-2xl shadow overflow-hidden p-0 hidden" style="font-family: 'Times New Roman', Times, serif;">
-  <!-- Header -->
-  <div class="bg-gray-100 px-4 py-2 border-b">
-    <h2 class="text-lg text-gray-800">Results:</h2>
-  </div>
+  <script>
+    // --- Config & DOM ---
+    const API_URL = "https://iapws-calc.onrender.com/api/steam";
+    let mode = "pressure";
 
-  <!-- Table -->
-  <table class="w-[90%] mx-auto my-6 border-collapse border border-gray-300 text-sm">
-    <thead>
-      <tr class="bg-gray-100">
-        <th class="border p-2 text-left">Property</th>
-        <th class="border p-2 text-left">Value</th>
-        <th class="border p-2 text-left">Unit</th>
-      </tr>
-    </thead>
-    <tbody id="resultTableBody"></tbody>
-  </table>
-</div>
+    const btnPressure = document.getElementById("btnPressure");
+    const btnTemperature = document.getElementById("btnTemperature");
+    const btnPT = document.getElementById("btnPT");
+    const pressureInput = document.getElementById("pressureInput");
+    const temperatureInput = document.getElementById("temperatureInput");
+    const superheatedInputs = document.getElementById("superheatedInputs");
+    const form = document.getElementById("inputForm");
+    const loadingEl = document.getElementById("loading");
+    const resultsCard = document.getElementById("resultsCard");
+    const resultBody = document.getElementById("resultTableBody");
+    const resultsHeading = document.getElementById("resultsHeading");
+    const helpText = document.getElementById("helpText");
 
-    </section>
+    // unit maps for table fallback
+    const unitMap = {
+      "T (°C)": "°C","P (MPa)": "MPa","P (bar abs)": "bar(a)","P (bar g)": "bar(g)",
+      "h (kJ/kg)": "kJ/kg","s (kJ/kg·K)": "kJ/kg·K","u (kJ/kg)": "kJ/kg",
+      "v (m³/kg)": "m³/kg","rho (kg/m³)": "kg/m³","Cp (kJ/kg·°C)": "kJ/kg·°C",
+      "Cv (kJ/kg·°C)": "kJ/kg·°C","w (m/s)": "m/s","mu (Pa·s)": "Pa·s",
+      "nu (m²/s)": "m²/s","k (W/m·K)": "W/m·K","x (quality)": "-"
+    };
 
-    <!-- Sidebar -->
-    <aside class="w-full lg:w-64 space-y-4">
-      <div class="bg-white p-4 rounded-2xl shadow" style="font-family: 'Times New Roman', Times, serif;">
-        <h3 class="text-lg mb-2">Feedback</h3>
-        <p class="text-sm mb-2">Have suggestions or found bugs?</p>
-        <a href="mailto:cefaigan71@gmail.com?subject=Steam%20Table%20Feedback&body=Tuliskan%20feedback%20anda..." class="text-blue-600 hover:underline text-sm">Send Feedback</a>
-      </div>
-        <!-- Link Addins -->
-      <div class="bg-white p-4 rounded-2xl shadow" style="font-family: 'Times New Roman', Times, serif;">
-        <h3 class="text-lg mb-2">Steam Tables</h3>
-        <a href="https://drive.google.com/file/d/1dG8FctY4lZSmRaLsl6NLPBSv9MNArqvF/view?usp=sharing" class="text-semibold hover:text-black text-blue-600 text-sm" title="Download SteamTables Excel Add-ins">💾 Excel Add-ins</a>
-      </div>
-      <div class="bg-white p-4 rounded-2xl shadow" style="font-family: 'Times New Roman', Times, serif;">
-  <h3 class="text-lg mb-2">Buy me a coffee!</h3>
-  <p class="text-sm mb-2">Like this project? You can support development.</p>
+    // update UI mode
+    function setMode(newMode) {
+      mode = newMode;
+      [btnPressure, btnTemperature, btnPT].forEach(b => b.classList.remove("bg-sky-700","text-white"));
+      if (mode === "pressure") btnPressure.classList.add("bg-sky-700","text-white");
+      if (mode === "temperature") btnTemperature.classList.add("bg-sky-700","text-white");
+      if (mode === "pt") btnPT.classList.add("bg-sky-700","text-white");
 
-  <!-- preset -->
-  <div class="flex gap-2 mb-2 text-sm">
-    <a href="https://paypal.me/cefaigan/3" target="_blank" class="px-3 py-1 border rounded-md hover:bg-gray-100 transition">$3</a>
-    <a href="https://paypal.me/cefaigan/5" target="_blank" class="px-3 py-1 border rounded-md hover:bg-gray-100 transition">$5</a>
-    <a href="https://paypal.me/cefaigan/10" target="_blank" class="px-3 py-1 border rounded-md hover:bg-gray-100 transition">$10</a>
-  </div>
+      pressureInput.classList.toggle("hidden", mode !== "pressure");
+      temperatureInput.classList.toggle("hidden", mode !== "temperature");
+      superheatedInputs.classList.toggle("hidden", mode !== "pt");
 
-  <!-- bebas amount -->
-  <div class="bg-white p-4 rounded-2xl shadow">
-    <div class="flex flex-col gap-1 text-sm">
-    <a href="https://paypal.me/cefaigan" target="_blank" class="text-blue-600 hover:underline">Donate via PayPal (USD)</a>
-    <a href="https://saweria.co/cecep81" target="_blank" class="text-orange-600 hover:underline">Donate via Saweria (ID)</a>
-  </div>
-</div>
-
-
-    </aside>
-  </main>
-
-<script>
-let mode = "pressure";
-
-const btnPressure = document.getElementById("btnPressure");
-const btnTemperature = document.getElementById("btnTemperature");
-const btnPT = document.getElementById("btnPT");
-const pressureInput = document.getElementById("pressureInput");
-const temperatureInput = document.getElementById("temperatureInput");
-const form = document.getElementById("inputForm");
-const resultDiv = document.getElementById("results");
-const resultBody = document.getElementById("resultTableBody");
-const API_URL = "https://iapws-calc.onrender.com/api/steam"; // Ganti sesuai domain kamu
-
-// --- Buat dropdown Superheated ---
-const superheatedInputs = document.createElement("div");
-superheatedInputs.id = "superheatedInputs";
-superheatedInputs.className = "space-y-3 hidden";
-superheatedInputs.innerHTML = `
-  <div class="flex items-center gap-2">
-    <label class="w-24 font-medium">Input 1</label>
-    <select id="input1Select" class="border rounded p-2 w-44">
-      <option value="pressure">Pressure</option>
-      <option value="temperature">Temperature</option>
-    </select>
-    <input id="input1Value" type="number" step="any" value="1" class="border rounded p-2 w-32" />
-    <select id="input1Unit" class="border rounded p-2">
-      <option>bar</option>
-      <option>MPa</option>
-    </select>
-  </div>
-
-  <div class="flex items-center gap-2">
-    <label class="w-24 font-medium">Input 2</label>
-    <select id="input2Select" class="border rounded p-2 w-52">
-      <option value="temperature">Temperature</option>
-      <option value="enthalpy">Enthalpy</option>
-      <option value="entropy">Entropy</option>
-      <option value="specific_volume">Specific Volume</option>
-      <option value="internal_energy">Internal Energy</option>
-      <option value="steam_quality">Steam Quality</option>
-    </select>
-    <input id="input2Value" type="number" step="any" value="100" class="border rounded p-2 w-32" />
-    <select id="input2Unit" class="border rounded p-2">
-      <option>°C</option>
-      <option>kJ/kg</option>
-      <option>m³/kg</option>
-      <option>-</option>
-    </select>
-  </div>
-`;
-form.insertBefore(superheatedInputs, form.querySelector("button"));
-
-// --- Fungsi reset hasil ---
-function resetResults() {
-  resultDiv.classList.add("hidden");
-  resultBody.innerHTML = "";
-  document.getElementById("preInfo").classList.remove("hidden");
-}
-
-// --- Ubah mode ---
-function setMode(newMode) {
-  mode = newMode;
-  [btnPressure, btnTemperature, btnPT].forEach(btn =>
-    btn.classList.remove("bg-sky-700", "text-white")
-  );
-
-  if (mode === "pressure") btnPressure.classList.add("bg-sky-700", "text-white");
-  if (mode === "temperature") btnTemperature.classList.add("bg-sky-700", "text-white");
-  if (mode === "pt") btnPT.classList.add("bg-sky-700", "text-white");
-
-  // Tampilkan input sesuai mode
-  if (mode === "pressure") {
-    pressureInput.classList.remove("hidden");
-    temperatureInput.classList.add("hidden");
-    superheatedInputs.classList.add("hidden");
-  } else if (mode === "temperature") {
-    pressureInput.classList.add("hidden");
-    temperatureInput.classList.remove("hidden");
-    superheatedInputs.classList.add("hidden");
-  } else {
-    pressureInput.classList.add("hidden");
-    temperatureInput.classList.add("hidden");
-    superheatedInputs.classList.remove("hidden");
-  }
-  resetResults();
-}
-
-btnPressure.onclick = () => setMode("pressure");
-btnTemperature.onclick = () => setMode("temperature");
-btnPT.onclick = () => setMode("pt");
-
-// --- Fungsi Submit ---
-form.onsubmit = async (e) => {
-  e.preventDefault();
-  let url = API_URL;
-
-  try {
-    if (mode === "pressure") {
-      const P = parseFloat(document.getElementById("pressureValue").value);
-      url += `?input=P&value=${P}`;
-    } 
-    else if (mode === "temperature") {
-      const T = parseFloat(document.getElementById("temperatureValue").value);
-      url += `?input=T&value=${T}`;
-    }
-    else if (mode === "pt") {
-  // 🔧 Ambil semua input dari blok superheated agar tidak bentrok dengan elemen lain
-  const superheatedBlock = document.getElementById("superheatedInputs");
-  const input1Select = superheatedBlock.querySelector("#input1Select");
-  const input2Select = superheatedBlock.querySelector("#input2Select");
-  const input1Value = superheatedBlock.querySelector("#input1Value");
-  const input2Value = superheatedBlock.querySelector("#input2Value");
-  
-  const prop1 = input1Select.value.trim().toLowerCase();
-  const prop2 = input2Select.value.trim().toLowerCase();
-  const val1 = parseFloat(input1Value.value);
-  const val2 = parseFloat(input2Value.value);
-
-  // 🔍 Mapping kombinasi properti ke kode backend
-  const comboMap = {
-    "pressure-temperature": "PT",
-    "pressure-enthalpy": "PH",
-    "pressure-entropy": "PS",
-    "pressure-specific_volume": "PV",
-    "pressure-internal_energy": "PU",
-    "pressure-steam_quality": "PX",
-    "temperature-enthalpy": "TH",
-    "temperature-entropy": "TS",
-    "temperature-specific_volume": "TV",
-    "temperature-internal_energy": "TU",
-    "temperature-steam_quality": "TX"
-  };
-
-  const key = `${prop1}-${prop2}`;
-  const combo = comboMap[key];
-
-  console.log("=== DEBUG SUPERHEATED ===");
-  console.log("Key kombinasi:", key);
-  console.log("Input Type dikirim:", combo);
-
-  if (!combo) {
-    alert(`Kombinasi '${key}' tidak dikenali!`);
-    return;
-  }
-
-  // 🔗 Buat URL
-  url = `${API_URL}?input=${combo}`;
-  if (combo.startsWith("P")) url += `&pressure=${val1}`;
-  else url += `&temperature=${val1}`;
-
-  // Tambahkan parameter kedua sesuai pilihan user
-  switch (prop2) {
-    case "temperature": url += `&temperature=${val2}`; break;
-    case "enthalpy": url += `&enthalpy=${val2}`; break;
-    case "entropy": url += `&entropy=${val2}`; break;
-    case "specific_volume": url += `&v=${val2}`; break;
-    case "internal_energy": url += `&u=${val2}`; break;
-    case "steam_quality": url += `&x=${val2}`; break;
-  }
-
-  console.log("🚀 URL dikirim:", url);
-}
-
-
-
-
-    const res = await fetch(url);
-    const text = await res.text();
-    console.log("📥 Response:", text);
-
-    const data = JSON.parse(text);
-    if (data.error) {
-      resultBody.innerHTML = `<tr><td colspan="3" class="text-red-600 p-2">${data.error}</td></tr>`;
-      resultDiv.classList.remove("hidden");
-      return;
+      resultsCard.classList.add("hidden");
+      resultBody.innerHTML = "";
+      helpText.classList.remove("hidden");
     }
 
-    const allProps = Object.values(data)[0]; // ambil hasil tunggal
-    const rows = [];
-    for (const [k, v] of Object.entries(allProps)) {
-      rows.push(`<tr><td class="border p-2">${k}</td><td class="border p-2 text-left">${v}</td><td class="border p-2"></td></tr>`);
+    btnPressure.onclick = () => setMode("pressure");
+    btnTemperature.onclick = () => setMode("temperature");
+    btnPT.onclick = () => setMode("pt");
+
+    // helper: show/hide loading
+    function setLoading(on) {
+      loadingEl.style.opacity = on ? "1" : "0";
     }
 
-    document.getElementById("preInfo").classList.add("hidden");
-    resultBody.innerHTML = rows.join("");
-    resultDiv.classList.remove("hidden");
+    // map combos to backend codes
+    const comboMap = {
+      "pressure-temperature": "PT",
+      "pressure-enthalpy": "PH",
+      "pressure-entropy": "PS",
+      "pressure-specific_volume": "PV",
+      "pressure-internal_energy": "PU",
+      "pressure-steam_quality": "PX",
+      "temperature-enthalpy": "TH",
+      "temperature-entropy": "TS",
+      "temperature-specific_volume": "TV",
+      "temperature-internal_energy": "TU",
+      "temperature-steam_quality": "TX"
+    };
 
-  } catch (err) {
-    console.error(err);
-    resultBody.innerHTML = `<tr><td colspan="3" class="text-red-600 p-2">${err.message}</td></tr>`;
-    resultDiv.classList.remove("hidden");
-  }
-};
-</script>
+    // auto-update unit labels in superheated inputs
+    const input1Select = document.getElementById("input1Select");
+    const input2Select = document.getElementById("input2Select");
+    const unit1 = document.getElementById("unit1");
+    const unit2 = document.getElementById("unit2");
+    const unitMapInput1 = { pressure: "bar", temperature: "°C" };
+    const unitMapInput2 = {
+      temperature: "°C",
+      enthalpy: "kJ/kg",
+      entropy: "kJ/kg·K",
+      specific_volume: "m³/kg",
+      internal_energy: "kJ/kg",
+      steam_quality: "-"
+    };
+    // safe: unit spans may not exist in earlier markup — guard
+    if (unit1) unit1.textContent = unitMapInput1[input1Select.value] || "-";
+    if (unit2) unit2.textContent = unitMapInput2[input2Select.value] || "-";
+    input1Select.onchange = () => { if (unit1) unit1.textContent = unitMapInput1[input1Select.value] || "-"; };
+    input2Select.onchange = () => { if (unit2) unit2.textContent = unitMapInput2[input2Select.value] || "-"; };
 
+    // submit handler
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      setLoading(true);
+      try {
+        let url = API_URL;
 
- <!-- ad -->
+        if (mode === "pressure") {
+          const P = parseFloat(document.getElementById("pressureValue").value);
+          url += `?input=P&value=${P}`;
+          resultsHeading.textContent = `Saturated (P = ${P})`;
+        } else if (mode === "temperature") {
+          const T = parseFloat(document.getElementById("temperatureValue").value);
+          url += `?input=T&value=${T}`;
+          resultsHeading.textContent = `Saturated (T = ${T})`;
+        } else if (mode === "pt") {
+          const prop1 = document.getElementById("input1Select").value;
+          const prop2 = document.getElementById("input2Select").value;
+          const val1 = parseFloat(document.getElementById("input1Value").value);
+          const val2 = parseFloat(document.getElementById("input2Value").value);
+
+          const key = `${prop1}-${prop2}`;
+          const combo = comboMap[key];
+          if (!combo) {
+            setLoading(false); alert(`Kombinasi '${key}' tidak dikenali!`); return;
+          }
+
+          url = `${API_URL}?input=${combo}`;
+          if (combo.startsWith("P")) url += `&pressure=${val1}`;
+          else url += `&temperature=${val1}`;
+
+          // second param
+          switch (prop2) {
+            case "temperature": url += `&temperature=${val2}`; break;
+            case "enthalpy": url += `&enthalpy=${val2}`; break;
+            case "entropy": url += `&entropy=${val2}`; break;
+            case "specific_volume": url += `&v=${val2}`; break;
+            case "internal_energy": url += `&u=${val2}`; break;
+            case "steam_quality": url += `&x=${val2}`; break;
+          }
+
+          resultsHeading.textContent = `Two-Property (${prop1.toUpperCase()} & ${prop2.toUpperCase()})`;
+        }
+
+        console.log("Fetching:", url);
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        // Clear results and render blocks
+        resultBody.innerHTML = "";
+
+        // We iterate through top-level keys (e.g. "Pressure & Temperature", "Steam Info")
+        for (const [blockName, blockData] of Object.entries(data)) {
+          // add block title row if not typical single block
+          if (Object.keys(data).length > 1) {
+            const titleText = blockName;
+            resultBody.innerHTML += `<tr><td colspan="3" class="bg-sky-100 text-sky-800 font-semibold text-center p-2">${titleText}</td></tr>`;
+          }
+
+          // For each property in the block
+          for (const [k, v] of Object.entries(blockData)) {
+            // format unit from key if exists
+            const unit = (k.match(/\((.*?)\)/) || [null, ""])[1] || (unitMap[k] || "");
+            // Some numeric rounding: try to show sensible decimals
+            let display = v;
+            if (typeof v === "number") {
+              // choose decimals: integers show as is
+              display = Math.abs(v) >= 100 ? v.toFixed(2) : Number(v.toPrecision(6));
+            }
+            // if percent-like (x as 0..1?) keep as provided
+            resultBody.innerHTML += `
+              <tr class="border-b hover:bg-sky-50 transition">
+                <td class="p-2">${k}</td>
+                <td class="p-2 text-gray-700">${display}</td>
+                <td class="p-2 text-gray-500">${unit}</td>
+              </tr>`;
+          }
+        }
+
+        // Show result card
+        resultsCard.classList.remove("hidden");
+        helpText.classList.add("hidden");
+      } catch (err) {
+        console.error(err);
+        resultBody.innerHTML = `<tr><td colspan="3" class="text-red-600 p-2">${err.message}</td></tr>`;
+        resultsCard.classList.remove("hidden");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // small helper to show spinner
+    function setLoading(on) {
+      const el = document.getElementById("loading");
+      if (!el) return;
+      el.style.opacity = on ? "1" : "0";
+    }
+
+    // initialize mode
+    setMode("pressure");
+  </script>
+  <!-- ad -->
             <div class="text-gray-700  p-8 my-10 max-w-5xl mx-auto" style="font-family: 'Times New Roman', Times, serif;">
                     <hr class="my-6 border-gray-300 -mx-8" />
                     <span class="text-muted">Unintrusive ads help us keep this site running</span>
@@ -413,18 +468,27 @@ form.onsubmit = async (e) => {
     This Online Steam Calculator was made after many other free online steam properties calculators lacked the set of inputs I needed to solve exercises for my Thermodynamics class. As a Mechanical Engineer trying to get into the world of web development and programming, I thought it would be a great project to practice coding and also offer a solution to my problem for free and to everyone.
   </p>
 </div>
+<!-- ==== Footer Section (Tambahan Aman) ==== -->
+<footer class="bg-gray-900 text-gray-300 py-4 border-t border-gray-700 w-full">
+<div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between px-6 space-y-3 md:space-y-0">
+<div class="text-center md:text-left">
+<p class="text-sm">
+Developed by: <span class="font-semibold text-white">Cecep Ependi</span>
+</p>
+<a href="mailto:cefaigan71@gmail.com" class="text-blue-400 text-sm hover:underline">
+cefaigan71@gmail.com
+</a>
+</div>
 
-<!-- Footer -->
-<footer class="bg-black text-gray-500 px-10 py-6 text-sm font-[Times_New_Roman]">
-  <p>
-  Developed with ❤️ by: <br>
-  E. Cecep Ependi <br>
-  <a href="mailto:cefaigan71@gmail.com" class="text-gray-500 hover:underline">
-    cefaigan71@gmail.com
-  </a>
-  </p>
+
+<div class="flex gap-4 items-center">
+<a href="mailto:cefaigan71@gmail.com" title="Email me">
+<img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png"
+alt="Gmail" class="w-6 h-6 hover:scale-110 transition-transform duration-200">
+</a>
+</div>
+</div>
 </footer>
-
 
 </body>
 </html>
