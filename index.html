@@ -422,10 +422,16 @@ function convertTemperatureToC(value, unit) {
 
           const key = `${prop1}-${prop2}`;
           const combo = comboMap[key];
+          
           if (!combo) {
             setLoading(false); alert(`Kombinasi '${key}' tidak dikenali!`); return;
           }
-
+          // 🚫 Cegah jika backend belum support PX/TX
+            if (combo.endsWith("X")) {
+              alert("Mode Steam Quality (PX atau TX) belum didukung oleh backend. Gunakan kombinasi lain seperti PH atau PS.");
+              setLoading(false);
+              return;
+            }
           url = `${API_URL}?input=${combo}`;
           if (combo.startsWith("P")) url += `&pressure=${val1}`;
           else url += `&temperature=${val1}`;

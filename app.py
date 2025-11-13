@@ -138,7 +138,58 @@ def steam_properties():
                     "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 2)
                 }
             }
-
+        # --- Mode P + X (Steam Quality dari tekanan) ---
+        elif input_type == 'PX' and pressure and request.args.get('x'):
+                    P = float(pressure) / 10
+                    x = float(request.args.get('x')) / 100  # konversi % ke 0–1
+                    if x < 0: x = 0
+                    if x > 1: x = 1
+                    water = IAPWS97(P=P, x=0)
+                    steam = IAPWS97(P=P, x=1)
+                    mix = IAPWS97(P=P, x=x)
+                    results = {
+                        "Pressure & Steam Quality": {
+                            "T (°C)": round(mix.T - 273.15, 2),
+                            "P (MPa)": P,
+                            "h (kJ/kg)": round(mix.h, 2),
+                            "s (kJ/kg·K)": round(mix.s, 4),
+                            "v (m³/kg)": round(mix.v, 6),
+                            "rho (kg/m³)": round(1 / mix.v, 3),
+                            "u (kJ/kg)": round(mix.u, 2),
+                            "x (quality %)": round(x * 100, 2)
+                        },
+                        "Steam Info": {
+                            "h_sat_liq (kJ/kg)": round(water.h, 2),
+                            "h_sat_vap (kJ/kg)": round(steam.h, 2),
+                            "h_mix (wet steam, kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
+                }
+             }
+                    # --- Mode T + X (Steam Quality dari temperatur) ---
+        elif input_type == 'TX' and temperature and request.args.get('x'):
+            T = float(temperature) + 273.15
+            x = float(request.args.get('x')) / 100
+            if x < 0: x = 0
+            if x > 1: x = 1
+            water = IAPWS97(T=T, x=0)
+            steam = IAPWS97(T=T, x=1)
+            mix = IAPWS97(T=T, x=x)
+            results = {
+                "Temperature & Steam Quality": {
+                    "T (°C)": round(mix.T - 273.15, 2),
+                    "P (MPa)": round(mix.P, 5),
+                    "h (kJ/kg)": round(mix.h, 2),
+                    "s (kJ/kg·K)": round(mix.s, 4),
+                    "v (m³/kg)": round(mix.v, 6),
+                    "rho (kg/m³)": round(1 / mix.v, 3),
+                    "u (kJ/kg)": round(mix.u, 2),
+                    "x (quality %)": round(x * 100, 2)
+                },
+                "Steam Info": {
+                    "h_sat_liq (kJ/kg)": round(water.h, 2),
+                    "h_sat_vap (kJ/kg)": round(steam.h, 2),
+                    "h_mix (wet steam, kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
+                }
+            }
         # --- Mode T + H ---
         elif input_type == 'TH' and temperature and enthalpy:
             T = float(temperature) + 273.15
