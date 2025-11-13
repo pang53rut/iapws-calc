@@ -44,32 +44,32 @@ def steam_properties():
 
             results = {
                 "Saturated Liquid": {
-                    "T (°C)": round(water.T - 273.15, 2),
-                    "P (MPa)": Pw_MPa,
-                    "P (bar abs)": Pw_bara,
-                    "P (bar g)": Pw_barg,
-                    "h (kJ/kg)": round(water.h, 2),
-                    "s (kJ/kg·K)": round(water.s, 4),
-                    "u (kJ/kg)": round(water.u, 2),
-                    "v (m³/kg)": round(water.v, 6),
-                    "rho (kg/m³)": round(1 / water.v, 2),
-                    "mu (Pa·s)": round(water.mu, 6),
-                    "nu (m²/s)": round(water.mu * water.v, 9),
-                    "x (quality)": 0.0
+                    "Temperature (°C)": round(water.T - 273.15, 2),
+                    "Pressure (MPa)": Pw_MPa,
+                    "Pressure (bar abs)": Pw_bara,
+                    "Pressure (bar g)": Pw_barg,
+                    "Enthalpy (kJ/kg)": round(water.h, 2),
+                    "Entropy (kJ/kg·K)": round(water.s, 4),
+                    "Internal Energy (kJ/kg)": round(water.u, 2),
+                    "Specific Volume (m³/kg)": round(water.v, 6),
+                    "Density (kg/m³)": round(1 / water.v, 2),
+                    "Dynamic Viscosity (Pa·s)": round(water.mu, 6),
+                    "Kinematic Viscosity (m²/s)": round(water.mu * water.v, 9),
+                    "X (quality)": 0.0
                 },
                 "Saturated Vapor": {
-                    "T (°C)": round(steam.T - 273.15, 2),
-                    "P (MPa)": Ps_MPa,
-                    "P (bar abs)": Ps_bara,
-                    "P (bar g)": Ps_barg,
-                    "h (kJ/kg)": round(steam.h, 2),
-                    "s (kJ/kg·K)": round(steam.s, 4),
-                    "u (kJ/kg)": round(steam.u, 2),
-                    "v (m³/kg)": round(steam.v, 6),
-                    "rho (kg/m³)": round(1 / steam.v, 2),
-                    "mu (Pa·s)": round(steam.mu, 6),
-                    "nu (m²/s)": round(steam.mu * steam.v, 9),
-                    "x (quality)": 1.0
+                    "Temperature (°C)": round(steam.T - 273.15, 2),
+                    "Pressure (MPa)": Ps_MPa,
+                    "Pressure (bar abs)": Ps_bara,
+                    "Pressure (bar g)": Ps_barg,
+                    "Enthalpy (kJ/kg)": round(steam.h, 2),
+                    "Entropy (kJ/kg·K)": round(steam.s, 4),
+                    "Internal Energy (kJ/kg)": round(steam.u, 2),
+                    "Specific Volume (m³/kg)": round(steam.v, 6),
+                    "Density (kg/m³)": round(1 / steam.v, 2),
+                    "Dynamic Viscosity (Pa·s)": round(steam.mu, 6),
+                    "Kinematic Viscosity (m²/s)": round(steam.mu * steam.v, 9),
+                    "X (quality)": 1.0
                 }
             }
 
@@ -105,7 +105,7 @@ def steam_properties():
                     "X Quality (%)": round(x * 100, 2),
                     "Sat. Liq. (kJ/kg)": round(hf, 2),
                     "Sat. Steam (kJ/kg)": round(hg, 2),
-                    "Wet Steam(kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 2)
                 }
             }
 
@@ -135,7 +135,7 @@ def steam_properties():
                     "X Quality (%)": round(x * 100, 2),
                     "Sat. Liq. (kJ/kg)": round(hf, 2),
                     "Sat. Steam (kJ/kg)": round(hg, 2),
-                    "Wet Steam(kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 2)
                 }
             }
 
@@ -165,21 +165,21 @@ def steam_properties():
 # 🔧 Helper untuk format hasil
 def format_state(state):
     return {
-        "T (°C)": round(state.T - 273.15, 2),
-        "P (MPa)": round(state.P, 5),
-        "P (bar abs)": round(state.P * 10, 4),
-        "P (bar g)": round(state.P * 10 - 1.01325, 4),
-        "v (m³/kg)": round(state.v, 6),
-        "rho (kg/m³)": round(1 / state.v, 3),
-        "h (kJ/kg)": round(state.h, 2),
-        "u (kJ/kg)": round(state.u, 2),
-        "s (kJ/kg·K)": round(state.s, 4),
-        "Cp (kJ/kg·°C)": round(state.cp, 3),
-        "Cv (kJ/kg·°C)": round(state.cv, 3),
-        "w (m/s)": round(state.w, 2),
-        "mu (Pa·s)": round(state.mu, 8),
-        "nu (m²/s)": round(state.mu * state.v, 9),
-        "k (W/m·K)": round(state.k, 5)
+        "Temperature (°C)": round(state.T - 273.15, 2),
+        "Pressure (MPa)": round(state.P, 5),
+        "Pressure (bar abs)": round(state.P * 10, 4),
+        "Pressure (bar g)": round(state.P * 10 - 1.01325, 4),
+        "Spesific volume (m³/kg)": round(state.v, 6),
+        "Density (kg/m³)": round(1 / state.v, 3),
+        "Enthalpy (kJ/kg)": round(state.h, 2),
+        "Internal energy (kJ/kg)": round(state.u, 2),
+        "Entropy (kJ/kg·K)": round(state.s, 4),
+        "Specific isobaric heat capacity (kJ/kg·°C)": round(state.cp, 3),
+        "Specific isochoric heat capacity (kJ/kg·°C)": round(state.cv, 3),
+        "Sound speed (m/s)": round(state.w, 2),
+        "Dynamic viscosity (Pa·s)": round(state.mu, 8),
+        "Kinematic viscosity (m²/s)": round(state.mu * state.v, 9),
+        "Thermal conductivity (W/m·K)": round(state.k, 5)
     }
 
 
