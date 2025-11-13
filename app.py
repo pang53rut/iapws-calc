@@ -69,7 +69,7 @@ def steam_properties():
                     "Density (kg/m³)": round(1 / steam.v, 2),
                     "Dynamic Viscosity (Pa·s)": round(steam.mu, 6),
                     "Kinematic Viscosity (m²/s)": round(steam.mu * steam.v, 9),
-                    "X (quality)": 1.0
+                    "X (quality)": 100.0
                 }
             }
 
