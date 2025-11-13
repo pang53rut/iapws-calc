@@ -55,7 +55,7 @@ def steam_properties():
                     "Density (kg/m³)": round(1 / water.v, 2),
                     "Dynamic Viscosity (Pa·s)": round(water.mu, 6),
                     "Kinematic Viscosity (m²/s)": round(water.mu * water.v, 9),
-                    "X (quality)": 0.0
+                    "X Quality (%)": 0.0
                 },
                 "Saturated Vapor": {
                     "Temperature (°C)": round(steam.T - 273.15, 2),
@@ -69,7 +69,7 @@ def steam_properties():
                     "Density (kg/m³)": round(1 / steam.v, 2),
                     "Dynamic Viscosity (Pa·s)": round(steam.mu, 6),
                     "Kinematic Viscosity (m²/s)": round(steam.mu * steam.v, 9),
-                    "X (quality)": 100.0
+                    "X Quality (%)": 100.0
                 }
             }
 
