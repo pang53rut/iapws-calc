@@ -1,14 +1,103 @@
+# app.py
 from flask import Flask, request, jsonify
 from iapws import IAPWS97
 from flask_cors import CORS
+import math
 
 app = Flask(__name__)
 CORS(app)
 
 
+# ------------------ Helpers / Safety wrappers ------------------
+
+def safe_iapws(P=None, T=None, x=None):
+    """
+    Try to call IAPWS97 with given arguments. Return instance or None if out of range.
+    Prefer explicit argument combinations: (P,T), (P,x), (T,x).
+    """
+    try:
+        if P is not None and T is not None:
+            return IAPWS97(P=P, T=T)
+        if P is not None and x is not None:
+            return IAPWS97(P=P, x=x)
+        if T is not None and x is not None:
+            return IAPWS97(T=T, x=x)
+        # fallback if a single arg provided (rare)
+        if P is not None:
+            return IAPWS97(P=P, x=0)
+        if T is not None:
+            return IAPWS97(T=T, x=0)
+    except Exception:
+        return None
+    return None
+
+
+def jsonify_error(msg, code=400):
+    return jsonify({'error': msg}), code
+
+
+def parse_float(s):
+    try:
+        return float(s)
+    except Exception:
+        return None
+
+
+# Format state for output
+def format_state(state):
+    # state is IAPWS97 or mixed pseudo object (with attributes)
+    def safe(attr, fmt=lambda x: x):
+        v = getattr(state, attr, None)
+        try:
+            return fmt(v) if v is not None else "—"
+        except Exception:
+            return "—"
+
+    # convert to human-friendly
+    return {
+        "Temperature (°C)": round(state.T - 273.15, 2) if getattr(state, "T", None) is not None else "—",
+        "Pressure (MPa)": round(state.P, 5) if getattr(state, "P", None) is not None else "—",
+        "Pressure (bar abs)": round(state.P * 10, 4) if getattr(state, "P", None) is not None else "—",
+        "Pressure (bar g)": round(state.P * 10 - 1.01325, 4) if getattr(state, "P", None) is not None else "—",
+        "Specific Volume (m³/kg)": round(getattr(state, "v", None), 6) if getattr(state, "v", None) is not None else "—",
+        "Density (kg/m³)": round(1 / state.v, 3) if getattr(state, "v", None) else "—",
+        "Enthalpy (kJ/kg)": round(getattr(state, "h", None), 2) if getattr(state, "h", None) is not None else "—",
+        "Internal energy (kJ/kg)": round(getattr(state, "u", None), 2) if getattr(state, "u", None) is not None else "—",
+        "Entropy (kJ/kg·K)": round(getattr(state, "s", None), 4) if getattr(state, "s", None) is not None else "—",
+        "Cp (kJ/kg·°C)": round(getattr(state, "cp", None), 3) if getattr(state, "cp", None) is not None else "—",
+        "Cv (kJ/kg·°C)": round(getattr(state, "cv", None), 3) if getattr(state, "cv", None) is not None else "—",
+        "Sound speed (m/s)": round(getattr(state, "w", None), 2) if getattr(state, "w", None) is not None else "—",
+        "Dynamic viscosity (Pa·s)": round(getattr(state, "mu", None), 8) if getattr(state, "mu", None) is not None else "—",
+        "Kinematic viscosity (m²/s)": round(getattr(state, "mu", None) * getattr(state, "v", 1), 9) if getattr(state, "mu", None) is not None and getattr(state, "v", None) is not None else "—",
+        "Thermal conductivity (W/m·K)": round(getattr(state, "k", None), 5) if getattr(state, "k", None) is not None else "—"
+    }
+
+
+# Interpolate mix properties for two-phase
+def make_mixture_from_quality(P, vf, vg, hf, hg, sf, sg, uf, ug, x):
+    class Mix: pass
+    ms = Mix()
+    ms.P = P
+    ms.T = IAPWS97(P=P, x=0).T  # saturated temperature (K) - use saturated liquid's T
+    ms.v = vf + x * (vg - vf)
+    ms.h = hf + x * (hg - hf)
+    ms.s = sf + x * (sg - sf)
+    ms.u = uf + x * (ug - uf)
+    # best-effort fill others (use saturated liquid attributes where available)
+    sat_liq = IAPWS97(P=P, x=0)
+    ms.cp = getattr(sat_liq, "cp", None)
+    ms.cv = getattr(sat_liq, "cv", None)
+    ms.k = getattr(sat_liq, "k", None)
+    ms.mu = getattr(sat_liq, "mu", None)
+    ms.w = getattr(sat_liq, "w", None)
+    return ms
+
+
+# ------------------ Main API ------------------
+
 @app.route('/')
 def home():
-    return "✅ IAPWS Steam API — now supports P–T, P–H, P–S, T–H, and T–S modes!"
+    return "✅ IAPWS Steam API — extended, safe modes: P, T, PT, PH, PS, TH, TS, PV, TV, PU, TU, PX, TX"
 
 
 @app.route('/api/steam', methods=['GET'])
@@ -21,533 +110,538 @@ def steam_properties():
         enthalpy = request.args.get('enthalpy')
         entropy = request.args.get('entropy')
 
-        # --- Mode Saturasi (P atau T) ---
+        # --- Saturation modes P or T ---
         if input_type in ['P', 'T']:
-            value = float(value)
+            if not value:
+                return jsonify_error("Missing 'value' for P or T mode")
+            val = parse_float(value)
+            if val is None:
+                return jsonify_error("Invalid numeric 'value'")
             if input_type == 'P':
-                P = value / 10
-                water = IAPWS97(P=P, x=0)
-                steam = IAPWS97(P=P, x=1)
-            elif input_type == 'T':
-                T = value + 273.15
-                water = IAPWS97(T=T, x=0)
-                steam = IAPWS97(T=T, x=1)
-
-            def press(state):
-                P_MPa = round(state.P, 5)
-                P_bara = round(P_MPa * 10, 4)
-                P_barg = round(P_bara - 1.01325, 4)
-                return P_MPa, P_bara, P_barg
-
-            Pw_MPa, Pw_bara, Pw_barg = press(water)
-            Ps_MPa, Ps_bara, Ps_barg = press(steam)
-
-            results = {
-                "Saturated Liquid": {
-                    "Temperature (°C)": round(water.T - 273.15, 2),
-                    "Pressure (MPa)": Pw_MPa,
-                    "Pressure (bar abs)": Pw_bara,
-                    "Pressure (bar g)": Pw_barg,
-                    "Enthalpy (kJ/kg)": round(water.h, 2),
-                    "Entropy (kJ/kg·K)": round(water.s, 4),
-                    "Internal Energy (kJ/kg)": round(water.u, 2),
-                    "Specific Volume (m³/kg)": round(water.v, 6),
-                    "Density (kg/m³)": round(1 / water.v, 2),
-                    "Dynamic Viscosity (Pa·s)": round(water.mu, 6),
-                    "Kinematic Viscosity (m²/s)": round(water.mu * water.v, 9),
-                    "X Quality (%)": 0.0
-                },
-                "Saturated Vapor": {
-                    "Temperature (°C)": round(steam.T - 273.15, 2),
-                    "Pressure (MPa)": Ps_MPa,
-                    "Pressure (bar abs)": Ps_bara,
-                    "Pressure (bar g)": Ps_barg,
-                    "Enthalpy (kJ/kg)": round(steam.h, 2),
-                    "Entropy (kJ/kg·K)": round(steam.s, 4),
-                    "Internal Energy (kJ/kg)": round(steam.u, 2),
-                    "Specific Volume (m³/kg)": round(steam.v, 6),
-                    "Density (kg/m³)": round(1 / steam.v, 2),
-                    "Dynamic Viscosity (Pa·s)": round(steam.mu, 6),
-                    "Kinematic Viscosity (m²/s)": round(steam.mu * steam.v, 9),
-                    "X Quality (%)": 100.0
+                # value expected in bar (abs) from frontend; convert to MPa
+                P = val / 10.0
+                sat_liq = safe_iapws(P=P, x=0)
+                sat_vap = safe_iapws(P=P, x=1)
+                if sat_liq is None or sat_vap is None:
+                    return jsonify_error("Pressure out of valid IAPWS97 range")
+                results = {
+                    "Saturated Liquid": {
+                        "Temperature (°C)": round(sat_liq.T - 273.15, 2),
+                        "Pressure (MPa)": round(sat_liq.P, 5),
+                        "Pressure (bar abs)": round(sat_liq.P * 10, 4),
+                        "Pressure (bar g)": round(sat_liq.P * 10 - 1.01325, 4),
+                        "Enthalpy (kJ/kg)": round(sat_liq.h, 2),
+                        "Entropy (kJ/kg·K)": round(sat_liq.s, 4),
+                        "Internal Energy (kJ/kg)": round(sat_liq.u, 2),
+                        "Specific Volume (m³/kg)": round(sat_liq.v, 6),
+                        "Density (kg/m³)": round(1 / sat_liq.v, 2),
+                        "Dynamic Viscosity (Pa·s)": round(sat_liq.mu, 6),
+                        "Kinematic Viscosity (m²/s)": round(sat_liq.mu * sat_liq.v, 9),
+                        "X Quality (%)": 0.0
+                    },
+                    "Saturated Vapor": {
+                        "Temperature (°C)": round(sat_vap.T - 273.15, 2),
+                        "Pressure (MPa)": round(sat_vap.P, 5),
+                        "Pressure (bar abs)": round(sat_vap.P * 10, 4),
+                        "Pressure (bar g)": round(sat_vap.P * 10 - 1.01325, 4),
+                        "Enthalpy (kJ/kg)": round(sat_vap.h, 2),
+                        "Entropy (kJ/kg·K)": round(sat_vap.s, 4),
+                        "Internal Energy (kJ/kg)": round(sat_vap.u, 2),
+                        "Specific Volume (m³/kg)": round(sat_vap.v, 6),
+                        "Density (kg/m³)": round(1 / sat_vap.v, 2),
+                        "Dynamic Viscosity (Pa·s)": round(sat_vap.mu, 6),
+                        "Kinematic Viscosity (m²/s)": round(sat_vap.mu * sat_vap.v, 9),
+                        "X Quality (%)": 100.0
+                    }
                 }
-            }
-
-        # --- Mode P + T ---
-        elif input_type == 'PT' and pressure and temperature:
-            P = float(pressure) / 10
-            T = float(temperature) + 273.15
-            st = IAPWS97(P=P, T=T)
-            results = {"Pressure & Temperature": format_state(st)}
-
-        # --- Mode P + H ---
-        elif input_type == 'PH' and pressure and enthalpy:
-            P = float(pressure) / 10
-            H = float(enthalpy)
-            st = find_state_by_property("h", P, H)
-
-            # Hitung data saturasi
-            sat_liq = IAPWS97(P=P, x=0)
-            sat_vap = IAPWS97(P=P, x=1)
-            hf, hg = sat_liq.h, sat_vap.h
-
-            # Hitung steam quality (%)
-            if hf <= H <= hg:
-                x = (H - hf) / (hg - hf)
-            elif H < hf:
-                x = 0
             else:
-                x = 1
+                # Temperature input (°C)
+                T_C = val
+                if T_C < -273.15 or T_C > 2000:
+                    return jsonify_error("Temperature out of expected bounds")
+                T = T_C + 273.15
+                sat_liq = safe_iapws(T=T, x=0)
+                sat_vap = safe_iapws(T=T, x=1)
+                if sat_liq is None or sat_vap is None:
+                    return jsonify_error("Temperature out of valid IAPWS97 range")
+                results = {
+                    "Saturated Liquid": {
+                        "Temperature (°C)": round(sat_liq.T - 273.15, 2),
+                        "Pressure (MPa)": round(sat_liq.P, 5),
+                        "Pressure (bar abs)": round(sat_liq.P * 10, 4),
+                        "Pressure (bar g)": round(sat_liq.P * 10 - 1.01325, 4),
+                        "Enthalpy (kJ/kg)": round(sat_liq.h, 2),
+                        "Entropy (kJ/kg·K)": round(sat_liq.s, 4),
+                        "Internal Energy (kJ/kg)": round(sat_liq.u, 2),
+                        "Specific Volume (m³/kg)": round(sat_liq.v, 6),
+                        "Density (kg/m³)": round(1 / sat_liq.v, 2),
+                        "Dynamic Viscosity (Pa·s)": round(sat_liq.mu, 6),
+                        "Kinematic Viscosity (m²/s)": round(sat_liq.mu * sat_liq.v, 9),
+                        "X Quality (%)": 0.0
+                    },
+                    "Saturated Vapor": {
+                        "Temperature (°C)": round(sat_vap.T - 273.15, 2),
+                        "Pressure (MPa)": round(sat_vap.P, 5),
+                        "Pressure (bar abs)": round(sat_vap.P * 10, 4),
+                        "Pressure (bar g)": round(sat_vap.P * 10 - 1.01325, 4),
+                        "Enthalpy (kJ/kg)": round(sat_vap.h, 2),
+                        "Entropy (kJ/kg·K)": round(sat_vap.s, 4),
+                        "Internal Energy (kJ/kg)": round(sat_vap.u, 2),
+                        "Specific Volume (m³/kg)": round(sat_vap.v, 6),
+                        "Density (kg/m³)": round(1 / sat_vap.v, 2),
+                        "Dynamic Viscosity (Pa·s)": round(sat_vap.mu, 6),
+                        "Kinematic Viscosity (m²/s)": round(sat_vap.mu * sat_vap.v, 9),
+                        "X Quality (%)": 100.0
+                    }
+                }
+            return jsonify(results)
 
-            results = {
+        # --- P + T (superheated/subcooled) ---
+        if input_type == 'PT':
+            if not pressure or not temperature:
+                return jsonify_error("Missing pressure or temperature for PT mode")
+            P = parse_float(pressure)
+            T_C = parse_float(temperature)
+            if P is None or T_C is None:
+                return jsonify_error("Invalid numeric pressure/temperature")
+            P_MPa = P / 10.0
+            T_K = T_C + 273.15
+            st = safe_iapws(P=P_MPa, T=T_K)
+            if st is None:
+                return jsonify_error("PT state out of IAPWS97 valid range")
+            return jsonify({"Pressure & Temperature": format_state(st)})
+
+        # --- P + H ---
+        if input_type == 'PH':
+            if not pressure or not enthalpy:
+                return jsonify_error("Missing pressure or enthalpy for PH mode")
+            P = parse_float(pressure)
+            H = parse_float(enthalpy)
+            if P is None or H is None:
+                return jsonify_error("Invalid numeric pressure/enthalpy")
+            P_MPa = P / 10.0
+            # find state by enthalpy (handles two-phase and superheated)
+            st = find_state_by_property("h", P_MPa, H)
+            if st is None:
+                return jsonify_error("PH: cannot find state for given P & h (out of range)")
+            # compute sat values for steam info
+            sat_liq = safe_iapws(P=P_MPa, x=0)
+            sat_vap = safe_iapws(P=P_MPa, x=1)
+            hf = sat_liq.h; hg = sat_vap.h
+            if hf <= H <= hg:
+                x = (H - hf) / (hg - hf) if hg != hf else 0.0
+            elif H < hf:
+                x = 0.0
+            else:
+                x = 1.0
+            return jsonify({
                 "Pressure & Enthalpy": format_state(st),
                 "Steam Info": {
-                    "X Quality (%)": round(x * 100, 2),
-                    "Sat. Liq. (kJ/kg)": round(hf, 2),
-                    "Sat. Steam (kJ/kg)": round(hg, 2),
-                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "X Quality (%)": round(x * 100, 4),
+                    "Sat. Liq. (kJ/kg)": round(hf, 4),
+                    "Sat. Steam (kJ/kg)": round(hg, 4),
+                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 4)
                 }
-            }
+            })
 
-        # --- Mode P + S ---
-        elif input_type == 'PS' and pressure and entropy:
-            P = float(pressure) / 10
-            S = float(entropy)
-            st = find_state_by_property("s", P, S)
-
-            # Hitung data saturasi
-            sat_liq = IAPWS97(P=P, x=0)
-            sat_vap = IAPWS97(P=P, x=1)
-            sf, sg = sat_liq.s, sat_vap.s
-            hf, hg = sat_liq.h, sat_vap.h
-
-            # Hitung steam quality (%)
+        # --- P + S ---
+        if input_type == 'PS':
+            if not pressure or not entropy:
+                return jsonify_error("Missing pressure or entropy for PS mode")
+            P = parse_float(pressure)
+            S = parse_float(entropy)
+            if P is None or S is None:
+                return jsonify_error("Invalid numeric pressure/entropy")
+            P_MPa = P / 10.0
+            st = find_state_by_property("s", P_MPa, S)
+            if st is None:
+                return jsonify_error("PS: cannot find state for given P & s (out of range)")
+            sat_liq = safe_iapws(P=P_MPa, x=0)
+            sat_vap = safe_iapws(P=P_MPa, x=1)
+            hf = sat_liq.h; hg = sat_vap.h; sf = sat_liq.s; sg = sat_vap.s
             if sf <= S <= sg:
-                x = (S - sf) / (sg - sf)
+                x = (S - sf) / (sg - sf) if sg != sf else 0.0
             elif S < sf:
-                x = 0
+                x = 0.0
             else:
-                x = 1
-
-            results = {
+                x = 1.0
+            return jsonify({
                 "Pressure & Entropy": format_state(st),
                 "Steam Info": {
-                    "X Quality (%)": round(x * 100, 2),
-                    "Sat. Liq. (kJ/kg)": round(hf, 2),
-                    "Sat. Steam (kJ/kg)": round(hg, 2),
-                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 2)
+                    "X Quality (%)": round(x * 100, 4),
+                    "Sat. Liq. (kJ/kg)": round(hf, 4),
+                    "Sat. Steam (kJ/kg)": round(hg, 4),
+                    "Wet Steam (kJ/kg)": round(hf + x * (hg - hf), 4)
                 }
-            }
+            })
 
-        # --- Mode T + H ---
-        elif input_type == 'TH' and temperature and enthalpy:
-            T = float(temperature) + 273.15
-            H = float(enthalpy)
-            st = find_state_by_property_T("h", T, H)
-            results = {"Temperature & Enthalpy": format_state(st)}
-
-        # --- Mode T + S ---
-        elif input_type == 'TS' and temperature and entropy:
-            T = float(temperature) + 273.15
-            S = float(entropy)
-            st = find_state_by_property_T("s", T, S)
-            results = {"Temperature & Entropy": format_state(st)}
-        # --- Mode P + V (Pressure + Specific Volume) ---
-        elif input_type == 'PV' and pressure and request.args.get('specificvolume'):
-            P = float(pressure) / 10
-            V_target = float(request.args.get('specificvolume'))
-
-            # Cari state dengan metode bisection berdasarkan volume
-            sat_liq = IAPWS97(P=P, x=0)
-            sat_vap = IAPWS97(P=P, x=1)
-
-            # Jika di dua fase
-            if sat_liq.v <= V_target <= sat_vap.v:
-                x = (V_target - sat_liq.v) / (sat_vap.v - sat_liq.v)
-                class Mix: pass
-                ms = Mix()
-                ms.P = P
-                ms.T = sat_liq.T
-                ms.v = V_target
-                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
-                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
-                ms.u = sat_liq.u + x * (sat_vap.u - sat_liq.u)
-                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
-                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
-                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
-                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
-                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
-                st = ms
-            else:
-                # superheated / compressed
-                T_low = sat_liq.T
-                T_high = sat_vap.T + 800
-                for _ in range(60):
-                    T_mid = 0.5 * (T_low + T_high)
-                    st_mid = IAPWS97(P=P, T=T_mid)
-                    if abs(st_mid.v - V_target) < 1e-8:
-                        st = st_mid
-                        break
-                    if st_mid.v > V_target:
-                        T_low = T_mid
-                    else:
-                        T_high = T_mid
-                st = st_mid
-
-            results = {"Pressure & Specific Volume": format_state(st)}
-        # --- Mode T + V (Temperature + Specific Volume) ---
-        elif input_type == 'TV' and temperature and (request.args.get('specificvolume') or request.args.get('specific_volume') or request.args.get('v')):
-            T = float(temperature) + 273.15
+        # --- P + V (specific volume) ---
+        if input_type == 'PV':
+            # accept parameter names: specificvolume, specific_volume, v
             v_raw = request.args.get('specificvolume') or request.args.get('specific_volume') or request.args.get('v')
-            V_target = float(v_raw)
-
-            # ambil properti saturasi pada T
-            sat_liq = IAPWS97(T=T, x=0)
-            sat_vap = IAPWS97(T=T, x=1)
+            if not pressure or v_raw is None:
+                return jsonify_error("Missing pressure or specific volume (v) for PV mode")
+            P = parse_float(pressure)
+            V_target = parse_float(v_raw)
+            if P is None or V_target is None:
+                return jsonify_error("Invalid numeric pressure or specific volume")
+            if V_target <= 0:
+                return jsonify_error("Specific volume must be > 0")
+            if V_target > 100.0:
+                return jsonify_error("Specific volume unphysically large")
+            P_MPa = P / 10.0
+            sat_liq = safe_iapws(P=P_MPa, x=0)
+            sat_vap = safe_iapws(P=P_MPa, x=1)
+            if sat_liq is None or sat_vap is None:
+                return jsonify_error("Pressure out of valid IAPWS97 range (PV)")
             vf, vg = sat_liq.v, sat_vap.v
-            P_sat = sat_liq.P  # MPa
+            hf, hg = sat_liq.h, sat_vap.h
+            uf, ug = sat_liq.u, sat_vap.u
+            sf, sg = sat_liq.s, sat_vap.s
 
-            # 1) two-phase: langsung interpolate jika V_target di antara vf dan vg
+            # two-phase case: interpolate
             if vf - 1e-12 <= V_target <= vg + 1e-12:
                 # quality
                 x = (V_target - vf) / (vg - vf) if vg != vf else 0.0
-                class Mix: pass
-                ms = Mix()
-                ms.P = P_sat
-                ms.T = T
-                ms.v = V_target
-                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
-                ms.u = sat_liq.u + x * (sat_vap.u - sat_liq.u)
-                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
-                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
-                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
-                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
-                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
-                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
-                st = ms
-            else:
-                # 2) superheated or compressed liquid: cari P yang memenuhi st.v ~= V_target
-                # buat bracket P_low,P_high yang monoton sehingga st.v(P) menurun dengan P
-                P_low = 1e-6   # sangat rendah
-                P_high = 100.0 # cukup tinggi (MPa) - sesuaikan jika perlu
+                st = make_mixture_from_quality(P_MPa, vf, vg, hf, hg, sf, sg, uf, ug, x)
+                return jsonify({"Pressure & Specific Volume": format_state(st)})
+            # otherwise search T such that v(P,T) ~= V_target (superheated / compressed)
+            # scan T bracket (saturated vapor T .. T_max)
+            T_low = sat_vap.T  # K
+            T_high = sat_vap.T + 1500  # generous upper bound
+            st_mid = None
+            for _ in range(80):
+                T_mid = 0.5 * (T_low + T_high)
+                st_try = safe_iapws(P=P_MPa, T=T_mid)
+                if st_try is None:
+                    # narrow down differently
+                    T_high = T_mid
+                    continue
+                if abs(st_try.v - V_target) < 1e-8:
+                    st_mid = st_try
+                    break
+                # monotonic: for fixed P, v generally increases with T for superheated; adjust accordingly
+                if st_try.v < V_target:
+                    T_low = T_mid
+                else:
+                    T_high = T_mid
+                st_mid = st_try
+            if st_mid is None:
+                return jsonify_error("PV: cannot find state matching specific volume at this pressure")
+            return jsonify({"Pressure & Specific Volume": format_state(st_mid)})
 
-                # Pastikan fungsi memiliki tanda berlawanan pada batas - jika tidak, expand batas atau fallback
-                st_low = IAPWS97(P=P_low, T=T)
-                st_high = IAPWS97(P=P_high, T=T)
-                # jika keduanya gagal (eksepsi) lakukan fallback scanning kecil
-                for _ in range(80):
-                    P_mid = 0.5 * (P_low + P_high)
-                    try:
-                        st_mid = IAPWS97(P=P_mid, T=T)
-                    except Exception:
-                        # jika library error dengan P_mid, adjust range
-                        P_low = P_mid
-                        continue
-
-                    # kondisi monotonic: jika st_mid.v > V_target -> root di kanan (naikkan P_low)
-                    if abs(st_mid.v - V_target) < 1e-9:
-                        st = st_mid
-                        break
-                    if st_mid.v > V_target:
-                        P_low = P_mid
-                    else:
-                        P_high = P_mid
-                    st = st_mid
-
-            results = {"Temperature & Specific Volume": format_state(st)}
-
-
-
-
-    # --- Mode P + U (Pressure + Internal Energy) ---
-        elif input_type == 'PU' and pressure and request.args.get('u'):
-            P = float(pressure) / 10
-            U_target = float(request.args.get('u'))
-
-            sat_liq = IAPWS97(P=P, x=0)
-            sat_vap = IAPWS97(P=P, x=1)
-
-            # two-phase
-            if sat_liq.u <= U_target <= sat_vap.u:
-                x = (U_target - sat_liq.u) / (sat_vap.u - sat_liq.u)
-                class Mix: pass
-                ms = Mix()
-                ms.P = P
-                ms.T = sat_liq.T
-                ms.u = U_target
-                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
-                ms.v = sat_liq.v + x * (sat_vap.v - sat_liq.v)
-                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
-                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
-                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
-                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
-                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
-                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
-                st = ms
-            else:
-                # superheated/compressed
-                T_low = sat_liq.T
-                T_high = sat_vap.T + 1000
-                for _ in range(60):
-                    T_mid = 0.5*(T_low+T_high)
-                    st_mid = IAPWS97(P=P,T=T_mid)
-                    diff = st_mid.u - U_target
-                    if abs(diff)<1e-6:
-                        st = st_mid
-                        break
-                    if diff>0:
-                        T_high = T_mid
-                    else:
-                        T_low = T_mid
-                st = st_mid
-
-            results = {"Pressure & Internal Energy": format_state(st)}
-
-
-        # --- Mode T + U (Temperature + Internal Energy) ---
-        elif input_type == 'TU' and temperature and (request.args.get('internalenergy') or request.args.get('internal_energy') or request.args.get('u')):
-            T = float(temperature) + 273.15
-            u_raw = request.args.get('internalenergy') or request.args.get('internal_energy') or request.args.get('u')
-            U_target = float(u_raw)
-
-            # saturasi pada T
-            sat_liq = IAPWS97(T=T, x=0)
-            sat_vap = IAPWS97(T=T, x=1)
+        # --- T + V ---
+        if input_type == 'TV':
+            v_raw = request.args.get('specificvolume') or request.args.get('specific_volume') or request.args.get('v')
+            if not temperature or v_raw is None:
+                return jsonify_error("Missing temperature or specific volume for TV mode")
+            T_C = parse_float(temperature)
+            V_target = parse_float(v_raw)
+            if T_C is None or V_target is None:
+                return jsonify_error("Invalid numeric temperature or specific volume")
+            if V_target <= 0:
+                return jsonify_error("Specific volume must be > 0")
+            T_K = T_C + 273.15
+            if T_K < 0 or T_K > 2500:
+                return jsonify_error("Temperature out of acceptable range")
+            sat_liq = safe_iapws(T=T_K, x=0)
+            sat_vap = safe_iapws(T=T_K, x=1)
+            if sat_liq is None or sat_vap is None:
+                return jsonify_error("Temperature out of valid IAPWS97 range (TV)")
+            vf, vg = sat_liq.v, sat_vap.v
+            hf, hg = sat_liq.h, sat_vap.h
             uf, ug = sat_liq.u, sat_vap.u
-            P_sat = sat_liq.P
+            sf, sg = sat_liq.s, sat_vap.s
+            # two-phase?
+            if vf - 1e-12 <= V_target <= vg + 1e-12:
+                x = (V_target - vf) / (vg - vf) if vg != vf else 0.0
+                st = make_mixture_from_quality(sat_liq.P, vf, vg, hf, hg, sf, sg, uf, ug, x)
+                return jsonify({"Temperature & Specific Volume": format_state(st)})
+            # otherwise find P such that v(P,T) ~= V_target
+            # bracket P (small..large)
+            P_low = 1e-6
+            P_high = 100.0
+            st_mid = None
+            for _ in range(80):
+                P_mid = 0.5 * (P_low + P_high)
+                st_try = safe_iapws(P=P_mid, T=T_K)
+                if st_try is None:
+                    # shrink or expand range
+                    P_high = P_mid
+                    continue
+                if abs(st_try.v - V_target) < 1e-9:
+                    st_mid = st_try
+                    break
+                # monotonic behaviour: at constant T, v usually decreases with increasing P
+                if st_try.v > V_target:
+                    P_low = P_mid
+                else:
+                    P_high = P_mid
+                st_mid = st_try
+            if st_mid is None:
+                return jsonify_error("TV: cannot find state matching specific volume at this temperature")
+            return jsonify({"Temperature & Specific Volume": format_state(st_mid)})
 
-            # 1) two-phase: jika U_target berada di antara uf dan ug
-            if uf - 1e-9 <= U_target <= ug + 1e-9:
+        # --- P + U (internal energy) ---
+        if input_type == 'PU':
+            u_raw = request.args.get('u') or request.args.get('internalenergy') or request.args.get('internal_energy')
+            if not pressure or u_raw is None:
+                return jsonify_error("Missing pressure or internal energy for PU mode")
+            P = parse_float(pressure)
+            U_target = parse_float(u_raw)
+            if P is None or U_target is None:
+                return jsonify_error("Invalid numeric pressure or internal energy")
+            P_MPa = P / 10.0
+            sat_liq = safe_iapws(P=P_MPa, x=0)
+            sat_vap = safe_iapws(P=P_MPa, x=1)
+            if sat_liq is None or sat_vap is None:
+                return jsonify_error("Pressure out of valid IAPWS97 range (PU)")
+            uf, ug = sat_liq.u, sat_vap.u
+            if uf - 1e-12 <= U_target <= ug + 1e-12:
                 x = (U_target - uf) / (ug - uf) if ug != uf else 0.0
-                class Mix: pass
-                ms = Mix()
-                ms.P = P_sat
-                ms.T = T
-                ms.u = U_target
-                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
-                ms.v = sat_liq.v + x * (sat_vap.v - sat_liq.v)
-                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
-                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
-                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
-                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
-                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
-                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
-                st = ms
-            else:
-                # 2) cari P via bisection supaya st.u ~= U_target
-                P_low = 1e-6
-                P_high = 100.0
-                for _ in range(80):
-                    P_mid = 0.5 * (P_low + P_high)
-                    try:
-                        st_mid = IAPWS97(P=P_mid, T=T)
-                    except Exception:
-                        P_low = P_mid
-                        continue
+                st = make_mixture_from_quality(P_MPa, sat_liq.v, sat_vap.v, sat_liq.h, sat_vap.h, sat_liq.s, sat_vap.s, uf, ug, x)
+                return jsonify({"Pressure & Internal Energy": format_state(st)})
+            # else search T such that u(P,T) ~= U_target
+            T_low = sat_liq.T
+            T_high = sat_vap.T + 1500
+            st_mid = None
+            for _ in range(80):
+                T_mid = 0.5 * (T_low + T_high)
+                st_try = safe_iapws(P=P_MPa, T=T_mid)
+                if st_try is None:
+                    T_high = T_mid
+                    continue
+                if abs(st_try.u - U_target) < 1e-6:
+                    st_mid = st_try
+                    break
+                if st_try.u < U_target:
+                    T_low = T_mid
+                else:
+                    T_high = T_mid
+                st_mid = st_try
+            if st_mid is None:
+                return jsonify_error("PU: cannot find state matching internal energy at this pressure")
+            return jsonify({"Pressure & Internal Energy": format_state(st_mid)})
 
-                    diff = st_mid.u - U_target
-                    if abs(diff) < 1e-6:
-                        st = st_mid
-                        break
-                    # jika st_mid.u > U_target, perlu tekan lebih tinggi (compress) -> naikkan P_low or P_high?
-                    # Observasi: st.u biasanya menurun with decreasing P, so if st_mid.u > U_target -> increase P
-                    if st_mid.u > U_target:
-                        P_low = P_mid
-                    else:
-                        P_high = P_mid
-                    st = st_mid
+        # --- T + U ---
+        if input_type == 'TU':
+            u_raw = request.args.get('u') or request.args.get('internalenergy') or request.args.get('internal_energy')
+            if not temperature or u_raw is None:
+                return jsonify_error("Missing temperature or internal energy for TU mode")
+            T_C = parse_float(temperature)
+            U_target = parse_float(u_raw)
+            if T_C is None or U_target is None:
+                return jsonify_error("Invalid numeric temperature or internal energy")
+            T_K = T_C + 273.15
+            sat_liq = safe_iapws(T=T_K, x=0)
+            sat_vap = safe_iapws(T=T_K, x=1)
+            if sat_liq is None or sat_vap is None:
+                return jsonify_error("Temperature out of valid IAPWS97 range (TU)")
+            uf, ug = sat_liq.u, sat_vap.u
+            if uf - 1e-12 <= U_target <= ug + 1e-12:
+                x = (U_target - uf) / (ug - uf) if ug != uf else 0.0
+                st = make_mixture_from_quality(sat_liq.P, sat_liq.v, sat_vap.v, sat_liq.h, sat_vap.h, sat_liq.s, sat_vap.s, uf, ug, x)
+                return jsonify({"Temperature & Internal Energy": format_state(st)})
+            # else search P via bisection such that u(P,T) ~= U_target
+            P_low = 1e-6
+            P_high = 100.0
+            st_mid = None
+            for _ in range(80):
+                P_mid = 0.5 * (P_low + P_high)
+                st_try = safe_iapws(P=P_mid, T=T_K)
+                if st_try is None:
+                    P_high = P_mid
+                    continue
+                if abs(st_try.u - U_target) < 1e-6:
+                    st_mid = st_try
+                    break
+                if st_try.u < U_target:
+                    P_low = P_mid
+                else:
+                    P_high = P_mid
+                st_mid = st_try
+            if st_mid is None:
+                return jsonify_error("TU: cannot find state matching internal energy at this temperature")
+            return jsonify({"Temperature & Internal Energy": format_state(st_mid)})
 
-            results = {"Temperature & Internal Energy": format_state(st)}
-
-            
-        # --- Mode P + X (Steam Quality dari tekanan) ---
-        elif input_type == 'PX' and pressure and (request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')):
-            P = float(pressure) / 10
+        # --- P + X (steam quality percent) ---
+        if input_type == 'PX':
             x_raw = request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')
-            try:
-                x = float(x_raw) / 100.0
-            except:
-                return jsonify({'error': 'Invalid x value'}), 400
-            x = max(0.0, min(1.0, x))
-            water = IAPWS97(P=P, x=0)
-            steam = IAPWS97(P=P, x=1)
-            mix = IAPWS97(P=P, x=x)
-            results = {
+            if not pressure or x_raw is None:
+                return jsonify_error("Missing pressure or x for PX mode")
+            P = parse_float(pressure)
+            x_pct = parse_float(x_raw)
+            if P is None or x_pct is None:
+                return jsonify_error("Invalid numeric pressure or x")
+            if x_pct < 0 or x_pct > 100:
+                return jsonify_error("x must be between 0 and 100 (percent)")
+            P_MPa = P / 10.0
+            x = x_pct / 100.0
+            sat_liq = safe_iapws(P=P_MPa, x=0)
+            sat_vap = safe_iapws(P=P_MPa, x=1)
+            mix = safe_iapws(P=P_MPa, x=x)
+            if sat_liq is None or sat_vap is None or mix is None:
+                return jsonify_error("PX: cannot compute properties at this pressure/x (out of range)")
+            return jsonify({
                 "Pressure & Steam Quality": {
-                    "Temperature (°C)": round(mix.T - 273.15, 2),
-                    "Pressure (MPa)": round(P, 5),
-                    "Enthalpy (kJ/kg)": round(mix.h, 2),
-                    "Entropy (kJ/kg·K)": round(mix.s, 4),
+                    "Temperature (°C)": round(mix.T - 273.15, 4),
+                    "Pressure (MPa)": round(P_MPa, 5),
+                    "Enthalpy (kJ/kg)": round(mix.h, 4),
+                    "Entropy (kJ/kg·K)": round(mix.s, 6),
                     "Specific Volume (m³/kg)": round(mix.v, 6),
-                    "Density (kg/m³)": round(1 / mix.v, 3),
-                    "Internal Energy (kJ/kg)": round(mix.u, 2),
-                    "X Quality (%)": round(x * 100, 2)
+                    "Density (kg/m³)": round(1 / mix.v, 4) if mix.v else "—",
+                    "Internal Energy (kJ/kg)": round(mix.u, 4),
+                    "X Quality (%)": round(x_pct, 4)
                 },
                 "Steam Info": {
-                    "Sat. Liq. (kJ/kg)": round(water.h, 2),
-                    "Sat. Steam (kJ/kg)": round(steam.h, 2),
-                    "Wet Steam (kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
+                    "Sat. Liq. (kJ/kg)": round(sat_liq.h, 4),
+                    "Sat. Steam (kJ/kg)": round(sat_vap.h, 4),
+                    "Wet Steam (kJ/kg)": round(sat_liq.h + x * (sat_vap.h - sat_liq.h), 4)
                 }
-            }
-        # --- Mode T + X (Steam Quality dari temperatur) ---
-        elif input_type == 'TX' and temperature and (request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')):
-            T = float(temperature) + 273.15
-            x_raw = request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')
-            try:
-                x = float(x_raw) / 100.0
-            except:
-                return jsonify({'error': 'Invalid x value'}), 400
-            x = max(0.0, min(1.0, x))
-            water = IAPWS97(T=T, x=0)
-            steam = IAPWS97(T=T, x=1)
-            mix = IAPWS97(T=T, x=x)
-            results = {
-                "Temperature & Steam Quality": {
-                    "Temperature (°C)": round(mix.T - 273.15, 2),
-                    "Pressure (MPa)": round(mix.P, 5),
-                    "Enthalpy (kJ/kg)": round(mix.h, 2),
-                    "Entropy (kJ/kg·K)": round(mix.s, 4),
-                    "Specific Volume (m³/kg)": round(mix.v, 6),
-                    "Density (kg/m³)": round(1 / mix.v, 3),
-                    "Internal Energy (kJ/kg)": round(mix.u, 2),
-                    "X Quality (%)": round(x * 100, 2)
-                },
-                "Steam Info": {
-                    "Sat. Liq. (kJ/kg)": round(water.h, 2),
-                    "Sat. Steam (kJ/kg)": round(steam.h, 2),
-                    "Wet Steam (kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
-                }
-            }
-        else:
-            return jsonify({'error': 'Invalid input. Supported: P, T, PT, PH, PS, TH, TS'})
+            })
 
-        return jsonify(results)
+        # --- T + X ---
+        if input_type == 'TX':
+            x_raw = request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')
+            if not temperature or x_raw is None:
+                return jsonify_error("Missing temperature or x for TX mode")
+            T_C = parse_float(temperature)
+            x_pct = parse_float(x_raw)
+            if T_C is None or x_pct is None:
+                return jsonify_error("Invalid numeric temperature or x")
+            if x_pct < 0 or x_pct > 100:
+                return jsonify_error("x must be between 0 and 100 (percent)")
+            T_K = T_C + 273.15
+            x = x_pct / 100.0
+            sat_liq = safe_iapws(T=T_K, x=0)
+            sat_vap = safe_iapws(T=T_K, x=1)
+            mix = safe_iapws(T=T_K, x=x)
+            if sat_liq is None or sat_vap is None or mix is None:
+                return jsonify_error("TX: cannot compute properties at this temperature/x (out of range)")
+            return jsonify({
+                "Temperature & Steam Quality": {
+                    "Temperature (°C)": round(mix.T - 273.15, 4),
+                    "Pressure (MPa)": round(mix.P, 5),
+                    "Enthalpy (kJ/kg)": round(mix.h, 4),
+                    "Entropy (kJ/kg·K)": round(mix.s, 6),
+                    "Specific Volume (m³/kg)": round(mix.v, 6),
+                    "Density (kg/m³)": round(1 / mix.v, 4) if mix.v else "—",
+                    "Internal Energy (kJ/kg)": round(mix.u, 4),
+                    "X Quality (%)": round(x_pct, 4)
+                },
+                "Steam Info": {
+                    "Sat. Liq. (kJ/kg)": round(sat_liq.h, 4),
+                    "Sat. Steam (kJ/kg)": round(sat_vap.h, 4),
+                    "Wet Steam (kJ/kg)": round(sat_liq.h + x * (sat_vap.h - sat_liq.h), 4)
+                }
+            })
+
+        # If not matched
+        return jsonify_error("Invalid input. Supported: P, T, PT, PH, PS, TH, TS, PV, TV, PU, TU, PX, TX")
 
     except Exception as e:
-        return jsonify({'error': str(e)})
+        # catch unexpected errors and provide readable message
+        return jsonify({'error': f'Internal error: {str(e)}'}), 500
 
 
-# 🔧 Helper untuk format hasil
-def format_state(state):
-    return {
-        "Temperature (°C)": round(state.T - 273.15, 2),
-        "Pressure (MPa)": round(state.P, 5),
-        "Pressure (bar abs)": round(state.P * 10, 4),
-        "Pressure (bar g)": round(state.P * 10 - 1.01325, 4),
-        "Spesific volume (m³/kg)": round(state.v, 6),
-        "Density (kg/m³)": round(1 / state.v, 3),
-        "Enthalpy (kJ/kg)": round(state.h, 2),
-        "Internal energy (kJ/kg)": round(state.u, 2),
-        "Entropy (kJ/kg·K)": round(state.s, 4),
-        "Specific isobaric heat capacity (kJ/kg·°C)": round(state.cp, 3),
-        "Specific isochoric heat capacity (kJ/kg·°C)": round(state.cv, 3),
-        "Sound speed (m/s)": round(state.w, 2),
-        "Dynamic viscosity (Pa·s)": round(state.mu, 8),
-        "Kinematic viscosity (m²/s)": round(state.mu * state.v, 9),
-        "Thermal conductivity (W/m·K)": round(state.k, 5)
-    }
+# ------------------ find_state helpers (unchanged logic but safer) ------------------
 
+def find_state_by_property(prop, P, target, tol=1e-6, tmax=1300.0):
+    """
+    Find state given pressure (MPa) and property (h or s).
+    - Returns mixture-like object for two-phase
+    - Returns IAPWS97 object for superheated/compressed
+    - Returns None if cannot find
+    """
+    # Validate P
+    sat_liq = safe_iapws(P=P, x=0)
+    sat_vap = safe_iapws(P=P, x=1)
+    if sat_liq is None or sat_vap is None:
+        return None
 
-# ganti fungsi find_state_by_property lama dengan ini
-def find_state_by_property(prop, P, target, tol=1e-6, tmax=1000.0):
-    sat_liq = IAPWS97(P=P, x=0)
-    sat_vap = IAPWS97(P=P, x=1)
     hf, hg = sat_liq.h, sat_vap.h
     sf, sg = sat_liq.s, sat_vap.s
     vf, vg = sat_liq.v, sat_vap.v
     uf, ug = sat_liq.u, sat_vap.u
 
-    # jika mencari berdasarkan enthalpy
     if prop == "h":
-        # 1) two-phase: langsung interpolate
-        if hf <= target <= hg:
+        # two-phase
+        if hf - 1e-12 <= target <= hg + 1e-12:
             x = (target - hf) / (hg - hf) if hg != hf else 0.0
-            class Mix: pass
-            ms = Mix()
-            ms.P = P
-            ms.T = sat_liq.T
-            ms.h = target
-            ms.s = sf + x * (sg - sf)
-            ms.v = vf + x * (vg - vf)
-            ms.u = uf + x * (ug - uf)
-            # set atribut lain supaya format_state bisa akses (boleh None)
-            ms.cp = getattr(sat_liq, "cp", None)
-            ms.cv = getattr(sat_liq, "cv", None)
-            ms.k = getattr(sat_liq, "k", None)
-            ms.mu = getattr(sat_liq, "mu", None)
-            ms.w = getattr(sat_liq, "w", None)
-            return ms
-
-        # 2) superheated: bisection cari T sehingga st.h ~= target
+            return make_mixture_from_quality(P, vf, vg, hf, hg, sf, sg, uf, ug, x)
+        # superheated
         if target > hg:
             T_low = sat_vap.T
-            T_high = tmax + 273.15
-            for _ in range(60):
+            T_high = sat_vap.T + tmax
+            st_mid = None
+            for _ in range(80):
                 T_mid = 0.5 * (T_low + T_high)
-                st_mid = IAPWS97(P=P, T=T_mid)
-                diff = st_mid.h - target
+                st_try = safe_iapws(P=P, T=T_mid)
+                if st_try is None:
+                    T_high = T_mid
+                    continue
+                diff = st_try.h - target
                 if abs(diff) < tol:
-                    return st_mid
+                    return st_try
                 if diff > 0:
                     T_high = T_mid
                 else:
                     T_low = T_mid
+                st_mid = st_try
             return st_mid
-
-        # 3) compressed liquid: kembalikan saturated liquid sebagai aproks.
+        # compressed liquid
         if target < hf:
             return sat_liq
 
-    # jika mencari berdasarkan entropy, lakukan analog (cek sf/sg lalu interpolate, dll.)
     if prop == "s":
-        if sf <= target <= sg:
+        if sf - 1e-12 <= target <= sg + 1e-12:
             x = (target - sf) / (sg - sf) if sg != sf else 0.0
-            class Mix: pass
-            ms = Mix()
-            ms.P = P
-            ms.T = sat_liq.T
-            ms.s = target
-            ms.h = hf + x * (hg - hf)
-            ms.v = vf + x * (vg - vf)
-            ms.u = uf + x * (ug - uf)
-            ms.cp = getattr(sat_liq, "cp", None)
-            ms.cv = getattr(sat_liq, "cv", None)
-            ms.k = getattr(sat_liq, "k", None)
-            ms.mu = getattr(sat_liq, "mu", None)
-            ms.w = getattr(sat_liq, "w", None)
-            return ms
-
+            return make_mixture_from_quality(P, vf, vg, hf, hg, sf, sg, uf, ug, x)
         if target > sg:
             T_low = sat_vap.T
-            T_high = tmax + 273.15
-            for _ in range(60):
+            T_high = sat_vap.T + tmax
+            st_mid = None
+            for _ in range(80):
                 T_mid = 0.5 * (T_low + T_high)
-                st_mid = IAPWS97(P=P, T=T_mid)
-                diff = st_mid.s - target
+                st_try = safe_iapws(P=P, T=T_mid)
+                if st_try is None:
+                    T_high = T_mid
+                    continue
+                diff = st_try.s - target
                 if abs(diff) < tol:
-                    return st_mid
+                    return st_try
                 if diff > 0:
                     T_high = T_mid
                 else:
                     T_low = T_mid
+                st_mid = st_try
             return st_mid
-
         if target < sf:
             return sat_liq
 
     return None
 
 
-
-# 🔧 Fungsi cari kondisi dari T + (H atau S)
-def find_state_by_property_T(prop, T, target):
-    best_state, best_diff = None, 1e9
-    for P in [x / 10 for x in range(1, 221)]:
-        st = IAPWS97(P=P, T=T)
-        diff = abs(getattr(st, prop) - target)
+def find_state_by_property_T(prop, T_K, target):
+    """
+    Given T (K) and property (h or s), scan pressure grid to find best match.
+    """
+    best_state = None
+    best_diff = 1e9
+    for Px in [x / 10.0 for x in range(1, 2001)]:  # 0.1 MPa steps up to 200 MPa -> wide coverage
+        st = safe_iapws(P=Px, T=T_K)
+        if st is None:
+            continue
+        try:
+            val = getattr(st, prop)
+        except Exception:
+            continue
+        diff = abs(val - target)
         if diff < best_diff:
             best_diff = diff
             best_state = st
+            if diff < 1e-6:
+                break
     return best_state
 
 
