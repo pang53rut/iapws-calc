@@ -422,25 +422,14 @@ function convertTemperatureToC(value, unit) {
 
           const key = `${prop1}-${prop2}`;
           const combo = comboMap[key];
-          
           if (!combo) {
             setLoading(false); alert(`Kombinasi '${key}' tidak dikenali!`); return;
           }
-          // 🚫 Cegah jika backend belum support PX/TX
-            if (combo.endsWith("X")) {
-              alert("Mode Steam Quality (PX atau TX) belum didukung oleh backend. Gunakan kombinasi lain seperti PH atau PS.");
-              setLoading(false);
-              return;
-            }
+
           url = `${API_URL}?input=${combo}`;
           if (combo.startsWith("P")) url += `&pressure=${val1}`;
           else url += `&temperature=${val1}`;
 
-          // ubah % jadi 0–1 sebelum dikirim
-let xValue = val2;
-if (prop2 === "steam_quality") {
-  xValue = val2 / 100; // konversi ke fraksi
-}
           // second param
           switch (prop2) {
             case "temperature": url += `&temperature=${val2}`; break;
@@ -448,7 +437,7 @@ if (prop2 === "steam_quality") {
             case "entropy": url += `&entropy=${val2}`; break;
             case "specific_volume": url += `&v=${val2}`; break;
             case "internal_energy": url += `&u=${val2}`; break;
-            case "steam_quality": url += `&x=${val2}`; break;
+            case "steam_quality": url += `&x=${val2/100}`; break;
           }
 
           resultsHeading.textContent = `Two-Property (${prop1.toUpperCase()} & ${prop2.toUpperCase()})`;

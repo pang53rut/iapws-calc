@@ -8,7 +8,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "✅ IAPWS Steam API — now supports P–T, P–H, P–S, T–H, and T–S modes!"
+    return "✅ IAPWS Steam API — supports P–T, P–H, P–S, T–H, T–S, P–X, and T–X modes!"
 
 
 @app.route('/api/steam', methods=['GET'])
@@ -115,13 +115,11 @@ def steam_properties():
             S = float(entropy)
             st = find_state_by_property("s", P, S)
 
-            # Hitung data saturasi
             sat_liq = IAPWS97(P=P, x=0)
             sat_vap = IAPWS97(P=P, x=1)
             sf, sg = sat_liq.s, sat_vap.s
             hf, hg = sat_liq.h, sat_vap.h
 
-            # Hitung steam quality (%)
             if sf <= S <= sg:
                 x = (S - sf) / (sg - sf)
             elif S < sf:
@@ -139,6 +137,67 @@ def steam_properties():
                 }
             }
 
+        # --- Mode P + X (Steam Quality dari tekanan) ---
+        elif input_type == 'PX' and pressure and (request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')):
+            P = float(pressure) / 10
+            x_raw = request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')
+            try:
+                x = float(x_raw) / 100.0
+            except:
+                return jsonify({'error': 'Invalid x value'}), 400
+            x = max(0.0, min(1.0, x))
+            water = IAPWS97(P=P, x=0)
+            steam = IAPWS97(P=P, x=1)
+            mix = IAPWS97(P=P, x=x)
+            results = {
+                "Pressure & Steam Quality": {
+                    "Temperature (°C)": round(mix.T - 273.15, 2),
+                    "Pressure (MPa)": round(P, 5),
+                    "Enthalpy (kJ/kg)": round(mix.h, 2),
+                    "Entropy (kJ/kg·K)": round(mix.s, 4),
+                    "Specific Volume (m³/kg)": round(mix.v, 6),
+                    "Density (kg/m³)": round(1 / mix.v, 3),
+                    "Internal Energy (kJ/kg)": round(mix.u, 2),
+                    "X Quality (%)": round(x * 100, 2)
+                },
+                "Steam Info": {
+                    "Sat. Liq. (kJ/kg)": round(water.h, 2),
+                    "Sat. Steam (kJ/kg)": round(steam.h, 2),
+                    "Wet Steam (kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
+                }
+            }
+
+# --- Mode T + X (Steam Quality dari temperatur) ---
+        elif input_type == 'TX' and temperature and (request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')):
+            T = float(temperature) + 273.15
+            x_raw = request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')
+            try:
+                x = float(x_raw) / 100.0
+            except:
+                return jsonify({'error': 'Invalid x value'}), 400
+            x = max(0.0, min(1.0, x))
+            water = IAPWS97(T=T, x=0)
+            steam = IAPWS97(T=T, x=1)
+            mix = IAPWS97(T=T, x=x)
+            results = {
+                "Temperature & Steam Quality": {
+                    "Temperature (°C)": round(mix.T - 273.15, 2),
+                    "Pressure (MPa)": round(mix.P, 5),
+                    "Enthalpy (kJ/kg)": round(mix.h, 2),
+                    "Entropy (kJ/kg·K)": round(mix.s, 4),
+                    "Specific Volume (m³/kg)": round(mix.v, 6),
+                    "Density (kg/m³)": round(1 / mix.v, 3),
+                    "Internal Energy (kJ/kg)": round(mix.u, 2),
+                    "X Quality (%)": round(x * 100, 2)
+                },
+                "Steam Info": {
+                    "Sat. Liq. (kJ/kg)": round(water.h, 2),
+                    "Sat. Steam (kJ/kg)": round(steam.h, 2),
+                    "Wet Steam (kJ/kg)": round(water.h + x * (steam.h - water.h), 2)
+                }
+            }
+
+
         # --- Mode T + H ---
         elif input_type == 'TH' and temperature and enthalpy:
             T = float(temperature) + 273.15
@@ -154,7 +213,7 @@ def steam_properties():
             results = {"Temperature & Entropy": format_state(st)}
 
         else:
-            return jsonify({'error': 'Invalid input. Supported: P, T, PT, PH, PS, TH, TS'})
+            return jsonify({'error': 'Invalid input. Supported: P, T, PT, PH, PS, TH, TS, PX, TX'})
 
         return jsonify(results)
 
@@ -162,28 +221,28 @@ def steam_properties():
         return jsonify({'error': str(e)})
 
 
-# 🔧 Helper untuk format hasil
+# ------------------ Helpers ------------------
+
 def format_state(state):
     return {
         "Temperature (°C)": round(state.T - 273.15, 2),
         "Pressure (MPa)": round(state.P, 5),
         "Pressure (bar abs)": round(state.P * 10, 4),
         "Pressure (bar g)": round(state.P * 10 - 1.01325, 4),
-        "Spesific volume (m³/kg)": round(state.v, 6),
+        "Specific Volume (m³/kg)": round(state.v, 6),
         "Density (kg/m³)": round(1 / state.v, 3),
         "Enthalpy (kJ/kg)": round(state.h, 2),
-        "Internal energy (kJ/kg)": round(state.u, 2),
+        "Internal Energy (kJ/kg)": round(state.u, 2),
         "Entropy (kJ/kg·K)": round(state.s, 4),
-        "Specific isobaric heat capacity (kJ/kg·°C)": round(state.cp, 3),
-        "Specific isochoric heat capacity (kJ/kg·°C)": round(state.cv, 3),
-        "Sound speed (m/s)": round(state.w, 2),
-        "Dynamic viscosity (Pa·s)": round(state.mu, 8),
-        "Kinematic viscosity (m²/s)": round(state.mu * state.v, 9),
-        "Thermal conductivity (W/m·K)": round(state.k, 5)
+        "Cp (kJ/kg·°C)": round(state.cp, 3),
+        "Cv (kJ/kg·°C)": round(state.cv, 3),
+        "Sound Speed (m/s)": round(state.w, 2),
+        "Dynamic Viscosity (Pa·s)": round(state.mu, 8),
+        "Kinematic Viscosity (m²/s)": round(state.mu * state.v, 9),
+        "Thermal Conductivity (W/m·K)": round(state.k, 5)
     }
 
 
-# ganti fungsi find_state_by_property lama dengan ini
 def find_state_by_property(prop, P, target, tol=1e-6, tmax=1000.0):
     sat_liq = IAPWS97(P=P, x=0)
     sat_vap = IAPWS97(P=P, x=1)
@@ -192,97 +251,56 @@ def find_state_by_property(prop, P, target, tol=1e-6, tmax=1000.0):
     vf, vg = sat_liq.v, sat_vap.v
     uf, ug = sat_liq.u, sat_vap.u
 
-    # jika mencari berdasarkan enthalpy
     if prop == "h":
-        # 1) two-phase: langsung interpolate
         if hf <= target <= hg:
-            x = (target - hf) / (hg - hf) if hg != hf else 0.0
+            x = (target - hf) / (hg - hf)
             class Mix: pass
             ms = Mix()
-            ms.P = P
-            ms.T = sat_liq.T
-            ms.h = target
-            ms.s = sf + x * (sg - sf)
-            ms.v = vf + x * (vg - vf)
-            ms.u = uf + x * (ug - uf)
-            # set atribut lain supaya format_state bisa akses (boleh None)
-            ms.cp = getattr(sat_liq, "cp", None)
-            ms.cv = getattr(sat_liq, "cv", None)
-            ms.k = getattr(sat_liq, "k", None)
-            ms.mu = getattr(sat_liq, "mu", None)
-            ms.w = getattr(sat_liq, "w", None)
+            ms.P = P; ms.T = sat_liq.T; ms.h = target
+            ms.s = sf + x * (sg - sf); ms.v = vf + x * (vg - vf); ms.u = uf + x * (ug - uf)
             return ms
-
-        # 2) superheated: bisection cari T sehingga st.h ~= target
         if target > hg:
-            T_low = sat_vap.T
-            T_high = tmax + 273.15
+            T_low, T_high = sat_vap.T, tmax + 273.15
             for _ in range(60):
                 T_mid = 0.5 * (T_low + T_high)
                 st_mid = IAPWS97(P=P, T=T_mid)
                 diff = st_mid.h - target
-                if abs(diff) < tol:
-                    return st_mid
-                if diff > 0:
-                    T_high = T_mid
-                else:
-                    T_low = T_mid
+                if abs(diff) < tol: return st_mid
+                if diff > 0: T_high = T_mid
+                else: T_low = T_mid
             return st_mid
+        if target < hf: return sat_liq
 
-        # 3) compressed liquid: kembalikan saturated liquid sebagai aproks.
-        if target < hf:
-            return sat_liq
-
-    # jika mencari berdasarkan entropy, lakukan analog (cek sf/sg lalu interpolate, dll.)
     if prop == "s":
         if sf <= target <= sg:
-            x = (target - sf) / (sg - sf) if sg != sf else 0.0
+            x = (target - sf) / (sg - sf)
             class Mix: pass
             ms = Mix()
-            ms.P = P
-            ms.T = sat_liq.T
-            ms.s = target
-            ms.h = hf + x * (hg - hf)
-            ms.v = vf + x * (vg - vf)
-            ms.u = uf + x * (ug - uf)
-            ms.cp = getattr(sat_liq, "cp", None)
-            ms.cv = getattr(sat_liq, "cv", None)
-            ms.k = getattr(sat_liq, "k", None)
-            ms.mu = getattr(sat_liq, "mu", None)
-            ms.w = getattr(sat_liq, "w", None)
+            ms.P = P; ms.T = sat_liq.T; ms.s = target
+            ms.h = hf + x * (hg - hf); ms.v = vf + x * (vg - vf); ms.u = uf + x * (ug - uf)
             return ms
-
         if target > sg:
-            T_low = sat_vap.T
-            T_high = tmax + 273.15
+            T_low, T_high = sat_vap.T, tmax + 273.15
             for _ in range(60):
                 T_mid = 0.5 * (T_low + T_high)
                 st_mid = IAPWS97(P=P, T=T_mid)
                 diff = st_mid.s - target
-                if abs(diff) < tol:
-                    return st_mid
-                if diff > 0:
-                    T_high = T_mid
-                else:
-                    T_low = T_mid
+                if abs(diff) < tol: return st_mid
+                if diff > 0: T_high = T_mid
+                else: T_low = T_mid
             return st_mid
-
-        if target < sf:
-            return sat_liq
+        if target < sf: return sat_liq
 
     return None
 
 
-
-# 🔧 Fungsi cari kondisi dari T + (H atau S)
 def find_state_by_property_T(prop, T, target):
     best_state, best_diff = None, 1e9
     for P in [x / 10 for x in range(1, 221)]:
         st = IAPWS97(P=P, T=T)
         diff = abs(getattr(st, prop) - target)
         if diff < best_diff:
-            best_diff = diff
-            best_state = st
+            best_diff, best_state = diff, st
     return best_state
 
 
