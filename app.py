@@ -152,6 +152,214 @@ def steam_properties():
             S = float(entropy)
             st = find_state_by_property_T("s", T, S)
             results = {"Temperature & Entropy": format_state(st)}
+        # --- Mode P + V (Pressure + Specific Volume) ---
+        elif input_type == 'PV' and pressure and request.args.get('specificvolume'):
+            P = float(pressure) / 10
+            V_target = float(request.args.get('specificvolume'))
+
+            # Cari state dengan metode bisection berdasarkan volume
+            sat_liq = IAPWS97(P=P, x=0)
+            sat_vap = IAPWS97(P=P, x=1)
+
+            # Jika di dua fase
+            if sat_liq.v <= V_target <= sat_vap.v:
+                x = (V_target - sat_liq.v) / (sat_vap.v - sat_liq.v)
+                class Mix: pass
+                ms = Mix()
+                ms.P = P
+                ms.T = sat_liq.T
+                ms.v = V_target
+                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
+                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
+                ms.u = sat_liq.u + x * (sat_vap.u - sat_liq.u)
+                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
+                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
+                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
+                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
+                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
+                st = ms
+            else:
+                # superheated / compressed
+                T_low = sat_liq.T
+                T_high = sat_vap.T + 800
+                for _ in range(60):
+                    T_mid = 0.5 * (T_low + T_high)
+                    st_mid = IAPWS97(P=P, T=T_mid)
+                    if abs(st_mid.v - V_target) < 1e-8:
+                        st = st_mid
+                        break
+                    if st_mid.v > V_target:
+                        T_low = T_mid
+                    else:
+                        T_high = T_mid
+                st = st_mid
+
+            results = {"Pressure & Specific Volume": format_state(st)}
+        # --- Mode T + V (Temperature + Specific Volume) ---
+        elif input_type == 'TV' and temperature and (request.args.get('specificvolume') or request.args.get('specific_volume') or request.args.get('v')):
+            T = float(temperature) + 273.15
+            v_raw = request.args.get('specificvolume') or request.args.get('specific_volume') or request.args.get('v')
+            V_target = float(v_raw)
+
+            # ambil properti saturasi pada T
+            sat_liq = IAPWS97(T=T, x=0)
+            sat_vap = IAPWS97(T=T, x=1)
+            vf, vg = sat_liq.v, sat_vap.v
+            P_sat = sat_liq.P  # MPa
+
+            # 1) two-phase: langsung interpolate jika V_target di antara vf dan vg
+            if vf - 1e-12 <= V_target <= vg + 1e-12:
+                # quality
+                x = (V_target - vf) / (vg - vf) if vg != vf else 0.0
+                class Mix: pass
+                ms = Mix()
+                ms.P = P_sat
+                ms.T = T
+                ms.v = V_target
+                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
+                ms.u = sat_liq.u + x * (sat_vap.u - sat_liq.u)
+                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
+                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
+                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
+                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
+                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
+                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
+                st = ms
+            else:
+                # 2) superheated or compressed liquid: cari P yang memenuhi st.v ~= V_target
+                # buat bracket P_low,P_high yang monoton sehingga st.v(P) menurun dengan P
+                P_low = 1e-6   # sangat rendah
+                P_high = 100.0 # cukup tinggi (MPa) - sesuaikan jika perlu
+
+                # Pastikan fungsi memiliki tanda berlawanan pada batas - jika tidak, expand batas atau fallback
+                st_low = IAPWS97(P=P_low, T=T)
+                st_high = IAPWS97(P=P_high, T=T)
+                # jika keduanya gagal (eksepsi) lakukan fallback scanning kecil
+                for _ in range(80):
+                    P_mid = 0.5 * (P_low + P_high)
+                    try:
+                        st_mid = IAPWS97(P=P_mid, T=T)
+                    except Exception:
+                        # jika library error dengan P_mid, adjust range
+                        P_low = P_mid
+                        continue
+
+                    # kondisi monotonic: jika st_mid.v > V_target -> root di kanan (naikkan P_low)
+                    if abs(st_mid.v - V_target) < 1e-9:
+                        st = st_mid
+                        break
+                    if st_mid.v > V_target:
+                        P_low = P_mid
+                    else:
+                        P_high = P_mid
+                    st = st_mid
+
+            results = {"Temperature & Specific Volume": format_state(st)}
+
+
+
+
+    # --- Mode P + U (Pressure + Internal Energy) ---
+        elif input_type == 'PU' and pressure and request.args.get('u'):
+            P = float(pressure) / 10
+            U_target = float(request.args.get('u'))
+
+            sat_liq = IAPWS97(P=P, x=0)
+            sat_vap = IAPWS97(P=P, x=1)
+
+            # two-phase
+            if sat_liq.u <= U_target <= sat_vap.u:
+                x = (U_target - sat_liq.u) / (sat_vap.u - sat_liq.u)
+                class Mix: pass
+                ms = Mix()
+                ms.P = P
+                ms.T = sat_liq.T
+                ms.u = U_target
+                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
+                ms.v = sat_liq.v + x * (sat_vap.v - sat_liq.v)
+                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
+                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
+                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
+                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
+                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
+                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
+                st = ms
+            else:
+                # superheated/compressed
+                T_low = sat_liq.T
+                T_high = sat_vap.T + 1000
+                for _ in range(60):
+                    T_mid = 0.5*(T_low+T_high)
+                    st_mid = IAPWS97(P=P,T=T_mid)
+                    diff = st_mid.u - U_target
+                    if abs(diff)<1e-6:
+                        st = st_mid
+                        break
+                    if diff>0:
+                        T_high = T_mid
+                    else:
+                        T_low = T_mid
+                st = st_mid
+
+            results = {"Pressure & Internal Energy": format_state(st)}
+
+
+        # --- Mode T + U (Temperature + Internal Energy) ---
+        elif input_type == 'TU' and temperature and (request.args.get('internalenergy') or request.args.get('internal_energy') or request.args.get('u')):
+            T = float(temperature) + 273.15
+            u_raw = request.args.get('internalenergy') or request.args.get('internal_energy') or request.args.get('u')
+            U_target = float(u_raw)
+
+            # saturasi pada T
+            sat_liq = IAPWS97(T=T, x=0)
+            sat_vap = IAPWS97(T=T, x=1)
+            uf, ug = sat_liq.u, sat_vap.u
+            P_sat = sat_liq.P
+
+            # 1) two-phase: jika U_target berada di antara uf dan ug
+            if uf - 1e-9 <= U_target <= ug + 1e-9:
+                x = (U_target - uf) / (ug - uf) if ug != uf else 0.0
+                class Mix: pass
+                ms = Mix()
+                ms.P = P_sat
+                ms.T = T
+                ms.u = U_target
+                ms.h = sat_liq.h + x * (sat_vap.h - sat_liq.h)
+                ms.v = sat_liq.v + x * (sat_vap.v - sat_liq.v)
+                ms.s = sat_liq.s + x * (sat_vap.s - sat_liq.s)
+                ms.cp = sat_liq.cp + x * (sat_vap.cp - sat_liq.cp)
+                ms.cv = sat_liq.cv + x * (sat_vap.cv - sat_liq.cv)
+                ms.k = sat_liq.k + x * (sat_vap.k - sat_liq.k)
+                ms.mu = sat_liq.mu + x * (sat_vap.mu - sat_liq.mu)
+                ms.w = sat_liq.w + x * (sat_vap.w - sat_liq.w)
+                st = ms
+            else:
+                # 2) cari P via bisection supaya st.u ~= U_target
+                P_low = 1e-6
+                P_high = 100.0
+                for _ in range(80):
+                    P_mid = 0.5 * (P_low + P_high)
+                    try:
+                        st_mid = IAPWS97(P=P_mid, T=T)
+                    except Exception:
+                        P_low = P_mid
+                        continue
+
+                    diff = st_mid.u - U_target
+                    if abs(diff) < 1e-6:
+                        st = st_mid
+                        break
+                    # jika st_mid.u > U_target, perlu tekan lebih tinggi (compress) -> naikkan P_low or P_high?
+                    # Observasi: st.u biasanya menurun with decreasing P, so if st_mid.u > U_target -> increase P
+                    if st_mid.u > U_target:
+                        P_low = P_mid
+                    else:
+                        P_high = P_mid
+                    st = st_mid
+
+            results = {"Temperature & Internal Energy": format_state(st)}
+
+            
         # --- Mode P + X (Steam Quality dari tekanan) ---
         elif input_type == 'PX' and pressure and (request.args.get('x') or request.args.get('steamquality') or request.args.get('steam_quality')):
             P = float(pressure) / 10
