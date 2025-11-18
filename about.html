@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About – Steam Property Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      background: #f5f9ff;
+      color: #1b334d;
+    }
+    h1, h2 {
+      color: #0d2a46;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    ul {
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>About – Steam Property Calculator</h1>
+
+    <p>
+      <strong>Steam Property Calculator</strong> is an advanced web-based tool designed to compute
+      thermodynamic properties of water and steam using the internationally recognized
+      <strong>IAPWS-97 formulation</strong>. The calculator provides accurate values for enthalpy,
+      entropy, specific volume, internal energy, steam quality, and other important properties in
+      saturated, wet, and superheated regions.
+    </p>
+
+    <h2>How the Calculator Works</h2>
+    <p>
+      This calculator processes user inputs—such as pressure, temperature, enthalpy, entropy,
+      specific volume, or steam quality—and performs real-time thermodynamic evaluation using the
+      IAPWS-97 equations. Depending on the selected mode, the backend:
+    </p>
+    <ul>
+      <li>Converts all units to SI for consistent calculations</li>
+      <li>Determines whether the state is compressed liquid, saturated, wet steam, or superheated</li>
+      <li>Performs interpolation in the two‑phase region</li>
+      <li>Uses numerical solving for superheated regions</li>
+      <li>Returns a complete set of properties in a clean table</li>
+    </ul>
+
+    <h2>Why This Calculator Was Built</h2>
+    <p>
+      This project began as a practical tool for engineering calculations where available online
+      calculators lacked flexible inputs, proper unit support, full thermodynamic combinations, or
+      modern UI. As the project grew, it evolved into a comprehensive steam‑property engine with a
+      responsive design and advanced backend.
+    </p>
+    <p>Today, it serves:</p>
+    <ul>
+      <li>Engineers</li>
+      <li>Students</li>
+      <li>Energy and geothermal practitioners</li>
+      <li>Power plant operators</li>
+      <li>Researchers</li>
+    </ul>
+
+    <h2>Key Features</h2>
+    <ul>
+      <li>Full support for IAPWS‑97 standard</li>
+      <li>Multiple input modes: P, T, PT, PH, PS, TH, TS, PX, TX, PV, TV, PU, TU</li>
+      <li>Automatic steam‑quality calculation (x‑quality)</li>
+      <li>Complete unit conversion system</li>
+      <li>Responsive and mobile‑friendly interface</li>
+      <li>Fast and stable backend API</li>
+      <li>Detailed liquid and vapor property tables</li>
+    </ul>
+
+    <h2>Mission</h2>
+    <p>
+      <em>To provide a modern, accurate, and free steam‑property tool accessible to everyone—engineers,
+      students, and anyone working with thermodynamics.</em>
+    </p>
+
+    <h2>Future Development</h2>
+    <ul>
+      <li>Rankine cycle analysis</li>
+      <li>Geothermal modules (wellhead steam, separators)</li>
+      <li>Interactive thermodynamic charts (T‑S, P‑H)</li>
+      <li>Offline mode and downloadable tools</li>
+      <li>Full API documentation</li>
+    </ul>
+  </div>
+</body>
+</html>
