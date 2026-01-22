@@ -10,7 +10,14 @@ CORS(app)
 Swagger(app)
 
 # ------------------ Helpers / Safety wrappers ------------------
+@app.route("/")
+def root():
+    return jsonify({
+        "status": "ok",
+        "service": "IAPWS Steam Table API"
+    })
 
+# ------------------ Helpers / Safety wrappers ------------------
 def safe_iapws(P=None, T=None, x=None):
     """
     Try to call IAPWS97 with given arguments. Return instance or None if out of range.
