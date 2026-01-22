@@ -114,54 +114,6 @@
 
       <!-- LEFT: main calculator (flex-1) -->
       <main class="flex-1">
-        <!-- ===============================
-     🔥 HOMEPAGE ARTICLE (SEO + ADSENSE)
-     =============================== -->
-<div class="card p-6 mb-6 fade-in">
-  <h2 class="text-2xl font-bold text-sky-800 mb-4">
-    Steam Property Calculator & Steam Tables – Complete Thermodynamic Reference
-  </h2>
-
-  <p class="text-gray-700 leading-relaxed mb-4">
-    SteamTables.my.id is a comprehensive online tool designed to help engineers, students, and researchers
-    perform accurate thermodynamic property calculations for water and steam. Built using the internationally
-    accepted IAPWS-IF97 formulation, this platform provides fast, reliable results for saturated, wet, and
-    superheated regions — essential for geothermal engineering, power plants, industrial boilers, HVAC,
-    and academic thermodynamics.
-  </p>
-
-  <h3 class="text-xl font-semibold text-sky-700 mt-6 mb-2">Why Use This Calculator?</h3>
-  <p class="text-gray-700 leading-relaxed mb-4">
-    Manual lookup from printed steam tables can be time-consuming and prone to error. This calculator simplifies
-    the process with real-time computation of enthalpy, entropy, steam quality, specific volume, internal energy,
-    and more. All results follow the official IAPWS IF-97 equations, ensuring engineering-grade accuracy.
-  </p>
-
-  <h3 class="text-xl font-semibold text-sky-700 mt-6 mb-2">Key Features</h3>
-  <ul class="list-disc ml-6 text-gray-700 leading-relaxed mb-4">
-    <li>Two-property mode for Pressure–Temperature or Pressure–Enthalpy inputs</li>
-    <li>Saturation mode for wet, liquid, and vapor states</li>
-    <li>Superheated region calculator with full property tables</li>
-    <li>Fast, browser-optimized, and mobile-friendly interface</li>
-    <li>Ideal for geothermal well testing, turbines, heat exchangers, and academic work</li>
-  </ul>
-
-  <h3 class="text-xl font-semibold text-sky-700 mt-6 mb-2">Applications</h3>
-  <p class="text-gray-700 leading-relaxed mb-4">
-    This tool is widely used in geothermal field testing, power plant cycle analysis, steam turbine calculations,
-    industrial steam systems, and mechanical engineering education. Whether you are analyzing two-phase flow,
-    checking saturation points, or computing superheated steam energy, this calculator provides everything
-    you need in one place.
-  </p>
-
-  <h3 class="text-xl font-semibold text-sky-700 mt-6 mb-2">Powered by IAPWS IF-97</h3>
-  <p class="text-gray-700 leading-relaxed">
-    All thermodynamic data is computed according to the <strong>IAPWS Industrial Formulation 1997</strong>,
-    the global standard for water and steam properties used in power generation and heat-cycle modeling.
-    This ensures consistency with professional engineering software and modern technical references.
-  </p>
-</div>
-
         <div class="card p-6 mb-4 fade-in">
           <h2 class="text-lg font-semibold text-sky-800 mb-3">Input:</h2>
 
@@ -179,7 +131,9 @@
             <div id="pressureInput" class="flex items-center gap-3">
               <label class="w-28 font-medium">Pressure</label>
               <input id="pressureValue" type="number" step="any" value="1" class="border rounded p-2 w-36" />
-              <select id="pressureUnit" class="border rounded p-2">
+                <select 
+                  id="pressureUnit" 
+                  class="border rounded p-2">
                 <option value="bar">bar</option>
                 <option value="bar g">bar g</option>
                 <option value="kpa">kPa</option>
@@ -191,7 +145,50 @@
                 <option value="psi">psi</option>
                 <option value="psi g">psi g</option>
               </select>
+              <span id="pressureHint" class="text-sm text-gray-500 ml-2"></span>
             </div>
+
+              <div
+                  id="atmosphericBox"
+                  class="ml-28 mt-3 p-3 bg-sky-50 border border-sky-200 rounded-md hidden"
+                >
+                  <div class="flex items-center gap-2 mb-2">
+                    <input type="checkbox" 
+                    id="applyAtm" 
+                    checked 
+                    onchange="updateAtmosphericPreview()"
+                    />
+                    <label for="applyAtm" class="text-sm font-medium">
+                      Apply atmospheric pressure correction
+                    </label>
+                  </div>
+
+                  <div class="flex items-center gap-3 mb-2">
+                    <label class="w-32 text-sm">Elevation (m AMSL)</label>
+                    <input
+                      id="altitude"
+                      type="number"
+                      value="0"
+                      step="1"
+                      oninput="updateAtmosphericPreview()"
+                      class="border rounded p-1.5 w-32 text-sm"
+                    />
+                  </div>
+
+                  <div class="text-sm text-slate-700">
+                    Atmospheric pressure:
+                    <strong><span id="patmValue">1.013</span> bar</strong>
+                  </div>
+
+                  <div class="text-sm text-slate-900 mt-1">
+                    → Absolute pressure:
+                    <strong><span id="pabsValue">1.013</span> bar</strong>
+                  </div>
+
+                  <div class="text-xs text-slate-500 mt-1">
+                    ℹ Calculated using ISA standard atmosphere
+                  </div>
+                </div>
 
             <!-- Temperature input -->
             <div id="temperatureInput" class="flex items-center gap-3 hidden">
@@ -302,6 +299,7 @@
 
   <script>
     // --- Config & DOM ---
+    //const API_URL = "https://api.steamtables.my.id/api/steam";
     const API_URL = "https://iapws-calc.onrender.com/api/steam";
     let mode = "pressure";
 
@@ -320,7 +318,7 @@
 
     // unit maps for table fallback
     const unitMap = {
-      "T (°C)": "°C","P (MPa)": "MPa","P (bar abs)": "bar(a)","P (bar g)": "bar(g)",
+      "T (°C)": "°C","P (MPa)": "MPa","P (bar abs)": "bar(a)",
       "h (kJ/kg)": "kJ/kg","s (kJ/kg·K)": "kJ/kg·K","u (kJ/kg)": "kJ/kg",
       "v (m³/kg)": "m³/kg","rho (kg/m³)": "kg/m³","Cp (kJ/kg·°C)": "kJ/kg·°C",
       "Cv (kJ/kg·°C)": "kJ/kg·°C","w (m/s)": "m/s","mu (Pa·s)": "Pa·s",
@@ -339,6 +337,11 @@
       temperatureInput.classList.toggle("hidden", mode !== "temperature");
       superheatedInputs.classList.toggle("hidden", mode !== "pt");
 
+       // 🔴 TAMBAHAN PENTING
+      const atmBox = document.getElementById("atmosphericBox");
+      if (atmBox) {
+        atmBox.classList.toggle("hidden", mode !== "pressure");
+      }
       resultsCard.classList.add("hidden");
       resultBody.innerHTML = "";
       helpText.classList.remove("hidden");
@@ -373,7 +376,7 @@
     const input2Select = document.getElementById("input2Select");
     const unit1 = document.getElementById("unit1");
     const unit2 = document.getElementById("unit2");
-    const unitMapInput1 = { pressure: "bar", temperature: "°C" };
+    const unitMapInput1 = { pressure: "bara", temperature: "°C" };
     const unitMapInput2 = {
       temperature: "°C",
       enthalpy: "kJ/kg",
@@ -393,7 +396,7 @@ function convertPressureToMPa(value, unit) {
   if (isNaN(value)) return 0;
   const conv = {
     "bar": value / 10,
-    "bar g": (value + 1.01325) / 10,
+    // "bar g": (value + 1.01325) / 10,
     "kpa": value / 1000,
     "kpa g": (value + 101.325) / 1000,
     "mpa": value,
@@ -423,10 +426,14 @@ function convertTemperatureToC(value, unit) {
         let url = API_URL;
 
         if (mode === "pressure") {
-              const P = parseFloat(document.getElementById("pressureValue").value);
-              const unit = document.getElementById("pressureUnit").value;
-              const P_MPa = convertPressureToMPa(P, unit);
-              url += `?input=P&value=${P_MPa * 10}`; // API pakai bar abs
+              const pAbs = getAbsolutePressureBar();
+
+              if (pAbs === null || isNaN(pAbs)) {
+                alert("Pressure value is not valid");
+                setLoading(false);
+                return;
+              }
+              url += `?input=P&value=${pAbs.toFixed(6)}`;
             }
             else if (mode === "temperature") {
               const T = parseFloat(document.getElementById("temperatureValue").value);
@@ -446,14 +453,9 @@ function convertTemperatureToC(value, unit) {
           }
 
           url = `${API_URL}?input=${combo}`;
-          if (combo.startsWith("P")) {
-                    const P_MPa = convertPressureToMPa(val1, "bar");  // ASSUME input1 unit = bar
-                    url += `&pressure=${P_MPa * 10}`; // backend expects bar abs
-                }
-          else {
-                    const T_C = convertTemperatureToC(val1, "°C");
-                    url += `&temperature=${T_C}`;
-                }
+          if (combo.startsWith("P")) url += `&pressure=${val1}`;
+          else url += `&temperature=${val1}`;
+
           // second param
           switch (prop2) {
             case "temperature": url += `&temperature=${val2}`; break;
@@ -545,7 +547,7 @@ function convertTemperatureToC(value, unit) {
             </div>
 <!-- Info Section -->
 <div class="bg-white text-gray-700 rounded-2xl shadow p-8 my-10 max-w-5xl mx-auto" style="font-family: 'Times New Roman', Times, serif;">
-  <h2 class="text-3xl  mb-6">Steam Tables Online Calculator</h2>
+  <h2 class="text-3xl  mb-6">Steam Property Calculator</h2>
 
   <h3 class="text-gray-400 text-2xl mb-3">How does this calculator work?</h3>
   <p class="text-gray-400 leading-relaxed mb-6">
@@ -642,35 +644,9 @@ function convertTemperatureToC(value, unit) {
   });
 </script>
 <script>
-// === 🔥 Real-time Conversion Hint (Pressure & Temperature) ===
-
-// Buat elemen tampilan konversi
-const pressureHint = document.createElement("div");
-pressureHint.className = "text-sm text-gray-500 mt-1";
-document.getElementById("pressureInput").appendChild(pressureHint);
-
 const temperatureHint = document.createElement("div");
 temperatureHint.className = "text-sm text-gray-500 mt-1";
 document.getElementById("temperatureInput").appendChild(temperatureHint);
-
-// --- Fungsi Konversi Pressure ---
-function convertPressure(val, unit) {
-  if (isNaN(val)) return "";
-  let bara = 0;
-  switch (unit.toLowerCase()) {
-    case "bar": bara = val; break;
-    case "bar g": bara = val + 1.01325; break;
-    case "kpa": bara = val / 100; break;
-    case "kpa g": bara = val / 100 + 1.01325; break;
-    case "mpa": bara = val * 10; break;
-    case "mpa g": bara = val * 10 + 1.01325; break;
-    case "kg/cm2": bara = val * 0.980665; break;
-    case "kg/cm2 g": bara = val * 0.980665 + 1.01325; break;
-    case "psi": bara = val * 0.0689476; break;
-    case "psi g": bara = val * 0.0689476 + 1.01325; break;
-  }
-  return `≈ ${bara.toFixed(3)} bar abs`;
-}
 
 // --- Fungsi Konversi Temperature ---
 function convertTemperature(val, unit) {
@@ -688,19 +664,6 @@ function convertTemperature(val, unit) {
 }
 
 
-// --- Event Listener Pressure ---
-document.getElementById("pressureValue").addEventListener("input", () => {
-  const val = parseFloat(document.getElementById("pressureValue").value);
-  const unit = document.getElementById("pressureUnit").value;
-  pressureHint.textContent = convertPressure(val, unit);
-});
-
-document.getElementById("pressureUnit").addEventListener("change", () => {
-  const val = parseFloat(document.getElementById("pressureValue").value);
-  const unit = document.getElementById("pressureUnit").value;
-  pressureHint.textContent = convertPressure(val, unit);
-});
-
 // --- Event Listener Temperature ---
 document.getElementById("temperatureValue").addEventListener("input", () => {
   const val = parseFloat(document.getElementById("temperatureValue").value);
@@ -715,6 +678,143 @@ document.getElementById("temperatureUnit").addEventListener("change", () => {
 });
 </script>
 
+<script>
+function toggleAtmosphericCorrection() {
+  const unit = document.getElementById("pressureUnit").value;
+  const isGauge = unit.includes("g");
+
+  document.getElementById("atmosphericBox").classList.toggle(
+    "hidden",
+    !isGauge
+  );
+}
+</script>
+
+<script>
+function calculatePatm(alt) {
+  const pPa = 101325 * Math.pow(
+    1 - (0.0065 * alt) / 288.15,
+    5.255
+  );
+  return pPa / 100000;
+}
+
+let pressureAbsBar = null;
+
+function updateAtmosphericPreview() {
+  const pVal = parseFloat(document.getElementById("pressureValue").value);
+  if (isNaN(pVal)) return;
+
+  const unit = document.getElementById("pressureUnit").value.toLowerCase();
+  const altitude = parseFloat(document.getElementById("altitude").value) || 0;
+  const applyAtm = document.getElementById("applyAtm").checked;
+
+  const pBar = toBar(pVal, unit);
+  if (isNaN(pBar)) return;
+
+  const isGauge = unit.includes(" g");
+  const patm = calculatePatm(altitude);
+
+  pressureAbsBar = (isGauge && applyAtm)
+    ? pBar + patm
+    : pBar;
+
+  // UI update
+  document.getElementById("patmValue").innerText = patm.toFixed(3);
+  document.getElementById("pabsValue").innerText = pressureAbsBar.toFixed(3);
+  document.getElementById("pressureHint").innerText =
+    `≈ ${pressureAbsBar.toFixed(3)} bar abs`;
+
+  // disable altitude if atm not applied
+  const altInput = document.getElementById("altitude");
+  altInput.disabled = !applyAtm;
+  altInput.classList.toggle("opacity-50", !applyAtm);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // ⛳️ FIRST LOAD STATE
+  handlePressureChange();
+
+  document.getElementById("pressureValue")
+    .addEventListener("input", updateAtmosphericPreview);
+
+  document.getElementById("pressureUnit")
+    .addEventListener("change", handlePressureChange);
+
+  document.getElementById("altitude")
+    .addEventListener("input", updateAtmosphericPreview);
+
+  document.getElementById("applyAtm")
+    .addEventListener("change", updateAtmosphericPreview);
+});
+
+</script>
+
+<script>
+function toBar(value, unit) {
+  unit = unit.trim().toLowerCase();
+
+  switch (unit) {
+    case "bar":
+    case "bar g":
+      return value;
+
+    case "kpa":
+    case "kpa g":
+      return value * 0.01;
+
+    case "mpa":
+    case "mpa g":
+      return value * 10;
+
+    case "kg/cm2":
+    case "kg/cm2 g":
+      return value * 0.980665;
+
+    case "psi":
+    case "psi g":
+      return value * 0.0689476;
+
+    default:
+      return NaN;
+  }
+}
+function isGaugeUnit(unit) {
+  return unit.toLowerCase().includes(" g");
+}
+
+function handlePressureChange() {
+  toggleAtmosphericBox();
+  updateAtmosphericPreview();
+}
+
+function toggleAtmosphericBox() {
+  const unit = document.getElementById("pressureUnit").value.toLowerCase();
+  const isGauge = unit.includes(" g");
+
+  const box = document.getElementById("atmosphericBox");
+  box.classList.toggle("hidden", !isGauge);
+}
+
+function getAbsolutePressureBar() {
+  const pVal = parseFloat(document.getElementById("pressureValue").value);
+  if (isNaN(pVal)) return null;
+
+  const unit = document.getElementById("pressureUnit").value.toLowerCase();
+  const altitude = parseFloat(document.getElementById("altitude").value) || 0;
+  const applyAtm = document.getElementById("applyAtm").checked;
+
+  const pBar = toBar(pVal, unit);
+  if (isNaN(pBar)) return null;
+
+  const isGauge = unit.includes(" g");
+  const patm = calculatePatm(altitude);
+
+  return (isGauge && applyAtm) ? (pBar + patm) : pBar;
+}
+
+</script>
 
 </body>
 </html>

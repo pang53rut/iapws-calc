@@ -1,123 +1,328 @@
+<!-- SteamTables Help HTML (Style B) - ready to publish as /help.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SteamTables Add-In Help</title>
+  <link rel="icon" type="image/png" href="logo.png" />
   <style>
-    body {
-      font-family: Segoe UI, Arial, sans-serif;
-      margin: 2em auto;
-      max-width: 900px;
-      line-height: 1.6;
-      background-color: #f9f9f9;
-      color: #333;
-    }
-    h1, h2, h3 {
-      color: #004578;
-    }
-    code {
-      background: #eee;
-      padding: 2px 5px;
-      border-radius: 4px;
-    }
-    .section {
-      background: white;
-      padding: 20px;
-      margin-bottom: 1.5em;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 1em;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-    }
-    th {
-      background: #f0f0f0;
-      text-align: left;
-    }
-    footer {
-      text-align: center;
-      color: #777;
-      font-size: 0.9em;
-      margin-top: 3em;
-    }
+    body { font-family: Segoe UI, Arial, sans-serif; margin: 2em auto; max-width: 1100px; line-height: 1.6; background-color: #f9f9f9; color: #333; }
+    h1, h2, h3 { color: #004578; }
+    code { background: #eee; padding: 2px 5px; border-radius: 4px; }
+    .section { background: white; padding: 20px; margin-bottom: 1.5em; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #e6e6e6; padding: 8px; vertical-align: top; }
+    th { background: #f4f6f8; text-align: left; }
+    .anchor { color: #004578; text-decoration: none; }
+    footer { text-align: center; color: #777; font-size: 0.9em; margin-top: 3em; }
   </style>
 </head>
 <body>
-  <h1>SteamTables Add-In for Excel</h1>
-  <p>
-    <strong>SteamTables Add-In</strong> provides thermodynamic properties of water and steam directly in Excel.
-    You can use its functions to calculate pressure, temperature, enthalpy, entropy, and more — both for
-    <em>saturated</em> and <em>superheated</em> regions.
-  </p>
+  <h1>SteamTables Add-In for Excel — Help</h1>
+  <p><strong>SteamTables Add-In</strong> provides thermodynamic properties of water and steam directly in Excel. Use the quick index below to jump to each category and function.</p>
+
+      <div class="section">
+      <h2>📦 Installation</h2>
+      <ol>
+        <li>Copy the entire folder <code>SteamTablesAddIn</code> to your computer.</li>
+
+        <li>
+          Add this folder as <strong>Trusted Location</strong> in Excel:
+          <ul>
+            <li>Go to <strong>File → Options → Trust Center → Trust Center Settings → Trusted Locations</strong></li>
+            <li>Click <strong>Add new location…</strong></li>
+            <li>Select the folder where <code>SteamTablesAddIn</code> is stored</li>
+          </ul>
+        </li>
+
+        <li>
+          After that go to <strong>File → Options → Add-ins → Manage: Excel Add-ins → Go…</strong>
+        </li>
+        <li>Click <strong>Browse</strong> and select <code>SteamTables-AddIn.xll</code>.</li>
+        <li>After enabled, all functions in <strong>SteamTables</strong> are ready to use directly in Excel formulas.</li>
+      </ol>
+    </div>
+
 
   <div class="section">
-    <h2>📦 Installation</h2>
-    <ol>
-      <li>Copy the entire folder <code>SteamTablesAddIn</code> to your computer.</li>
-      <li>In Excel, go to <strong>File → Options → Add-ins → Manage: Excel Add-ins → Go…</strong></li>
-      <li>Click <strong>Browse</strong> and select <code>SteamTables.xll</code>.</li>
-      <li>After enabling, you will see the <strong>SteamTables</strong> tab appear in your Excel ribbon.</li>
-    </ol>
+    <h2>Index</h2>
+    <ul>
+      <li><a href="#TEMPERATURE">Temperature</a></li>
+      <li><a href="#PRESSURE">Pressure</a></li>
+      <li><a href="#ENTHALPY">Enthalpy</a></li>
+      <li><a href="#SPECIFIC_VOLUME">Specific volume</a></li>
+      <li><a href="#DENSITY">Density</a></li>
+      <li><a href="#SPECIFIC_ENTROPY">Specific entropy</a></li>
+      <li><a href="#SPECIFIC_INTERNAL_ENERGY">Specific internal energy</a></li>
+      <li><a href="#CP">Specific isobaric heat capacity (Cp)</a></li>
+      <li><a href="#CV">Specific isochoric heat capacity (Cv)</a></li>
+      <li><a href="#SPEED_OF_SOUND">Speed of sound</a></li>
+      <li><a href="#KINEMATIC_VISCOSITY">Kinematic viscosity</a></li>
+      <li><a href="#DYNAMIC_VISCOSITY">Dynamic viscosity</a></li>
+      <li><a href="#THERMAL_CONDUCTIVITY">Thermal conductivity</a></li>
+      <li><a href="#SURFACE_TENSION">Surface tension</a></li>
+      <li><a href="#VAPOUR_FRACTION">Vapour fraction</a></li>
+       <li><a href="#VAPOUR_VOLUME_FRACTION">Vapour Volume fraction</a></li>
+      <li><a href="#ATMOSPHERE">Atmospheric Pressure</a></li>
+    </ul>
   </div>
 
-  <div class="section">
-    <h2>🧮 Available Functions</h2>
+  <!-- TEMPERATURE -->
+  <div class="section" id="TEMPERATURE">
+    <h2>Temperature</h2>
+    <p>Functions to compute temperature-related properties.</p>
     <table>
       <thead>
         <tr><th>Function</th><th>Description</th><th>Example</th></tr>
       </thead>
       <tbody>
-        <tr>
-          <td><code>=ST_Tsat(P)</code></td>
-          <td>Returns saturation temperature (°C) for a given pressure (bar).</td>
-          <td><code>=ST_Tsat(10)</code> → 179.9 °C</td>
-        </tr>
-        <tr>
-          <td><code>=ST_Psat(T)</code></td>
-          <td>Returns saturation pressure (bar) for a given temperature (°C).</td>
-          <td><code>=ST_Psat(200)</code> → 15.54 bar</td>
-        </tr>
-        <tr>
-          <td><code>=ST_Hpt(P, T)</code></td>
-          <td>Returns specific enthalpy (kJ/kg) for given pressure (bar) and temperature (°C).</td>
-          <td><code>=ST_Hpt(10, 250)</code></td>
-        </tr>
-        <tr>
-          <td><code>=ST_Spt(P, T)</code></td>
-          <td>Returns specific entropy (kJ/kg·K) for given pressure (bar) and temperature (°C).</td>
-          <td><code>=ST_Spt(10, 250)</code></td>
-        </tr>
+        <tr id="TSAT_P"><td><code>TSAT_P(P)</code></td><td>Saturation temperature (°C) for given pressure (bara).</td><td><code>=TSAT_P(1)</code> → 99.61 °C</td></tr>
+        <tr id="TSAT_PH"><td><code>TSAT_PH(P,H)</code></td><td>Temperature as a function of pressure (bara) and enthalpy (kJ/kg)</td><td><code>=TSAT_PH(1,100)</code> → 23.84 °C</td></tr>
+        <tr id="TSAT_PS"><td><code>TSAT_PS(P,S)</code></td><td>Temperature as a function of pressure (bara) and entropy (kJ/kg·K)</td><td><code>=TSAT_PS(1,1)</code> → 73.71 °C</td></tr>
+        <tr id="TSAT_HS"><td><code>TSAT_HS(H,S)</code></td><td>Temperature as a function of enthalpy (kJ/kg) and entropy (kJ/kg·K)</td><td><code>=TSAT_HS(100,0.2)</code> → 13.85 °C</td></tr>
       </tbody>
     </table>
   </div>
 
-  <div class="section">
-    <h2>⚙️ Ribbon Menu</h2>
-    <p>
-      The add-in adds a <strong>SteamTables</strong> tab to the Excel ribbon.  
-      It includes buttons to:
-    </p>
-    <ul>
-      <li>Open this Help page</li>
-      <li>Access Steam property calculators</li>
-      <li>Switch between single-phase and two-phase flow tools (if included)</li>
-    </ul>
+  <!-- PRESSURE -->
+  <div class="section" id="PRESSURE">
+    <h2>Pressure</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="PSAT_T"><td><code>PSAT_T(T)</code></td><td>Saturation pressure (bara) for given temperature (°C).</td><td><code>=PSAT_T(100)</code> → 1.01 bar</td></tr>
+        <tr id="P_HS"><td><code>P_HS(H,S)</code></td><td>Pressure as function of enthalpy (kJ/kg) and entropy (kJ/kg·K).</td><td><code>=P_HS(84,1)</code> → 15 bar</td></tr>
+        <tr id="P_RHO"><td><code>P_RHO(H,RHO)</code></td><td>Pressure as function of enthalpy (kJ/kg) and density (kg/m^3).</td><td><code>=P_RHO(2000,5)</code> → 6.05 bar</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <div class="section">
-    <h2>💡 Tips</h2>
-    <ul>
-      <li>All functions work in both cell formulas and VBA macros.</li>
-      <li>Use consistent units: pressure in <code>bar</code>, temperature in <code>°C</code>.</li>
-      <li>For two-phase states, specify quality (x) between 0–1 when applicable.</li>
-    </ul>
+  <!-- ENTHALPY -->
+  <div class="section" id="ENTHALPY">
+    <h2>Enthalpy</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="H_V_P"><td><code>H_V_P(P)</code></td><td>Saturated vapour enthalpy for given pressure (bara).</td><td><code>=HV_P(1)</code> → 2674.95 kJ/kg</td></tr>
+        <tr id="H_L_P"><td><code>H_L_P(P)</code></td><td>Saturated liquid enthalpy for given pressure (bara).</td><td><code>=HL_P(1)</code> → 417.44 kJ/kg</td></tr>
+        <tr id="H_V_T"><td><code>H_V_T(T)</code></td><td>Saturated vapour enthalpy for given temperature (°C).</td><td><code>=HV_T(100)</code> → 2675.57 kJ/kg</td></tr>
+        <tr id="H_L_T"><td><code>H_L_T(T)</code></td><td>Saturated liquid enthalpy for given temperature (°C).</td><td><code>=HV_T(100)</code> → 419.1 kJ/kg</td></tr>
+        <tr id="H_P_T"><td><code>H_P_T(P,T)</code></td><td>Enthalpy as a function of pressure (bara) and temperature (°C).</td><td><code>=H_PT(17.61,206)</code> → 879.53 kJ/kg</td></tr>
+        <tr id="H_P_S"><td><code>H_P_S(P,S)</code></td><td>Enthalpy as a function of pressure (bara) and entropy (kJ/kg·K).</td><td><code>=H_PS(1,1)</code> → 308.61 kJ/kg</td></tr>
+        <tr id="H_PX"><td><code>H_PX(P,X)</code></td><td>Enthalpy as a function of pressure (bara) and vapour fraction (x).</td><td><code>=H_PX(1,0.5)</code> → 1546.19 kJ/kg</td></tr>
+        <tr id="H_TX"><td><code>H_TX(T,X)</code></td><td>Enthalpy as a function of temperature (°C) and vapour fraction (x).</td><td><code>=H_TX(100,0.5)</code> → 1547.34 kJ/kg</td></tr>
+        <tr id="H_PRHO"><td><code>H_PRHO(P,RHO)</code></td><td>Enthalpy as a function of pressure (bara) and density (kg/m^3).</td><td><code>=H_PRHO(1,2)</code> → 1082.77 kJ/kg</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SPECIFIC VOLUME -->
+  <div class="section" id="SPECIFIC_VOLUME">
+    <h2>Specific volume</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="VV_P"><td><code>VV_P(P)</code></td><td>Saturated vapour specific volume at pressure P (m^3/kg).</td><td>—</td></tr>
+        <tr id="VL_P"><td><code>VL_P(P)</code></td><td>Saturated liquid specific volume at pressure P (m^3/kg).</td><td>—</td></tr>
+        <tr id="V_P_T"><td><code>V_P_T(P,T)</code></td><td>Specific volume as function of pressure and temperature.</td><td>—</td></tr>
+        <tr id="V_P_H"><td><code>V_P_H(P,H)</code></td><td>Specific volume as function of pressure and enthalpy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DENSITY -->
+  <div class="section" id="DENSITY">
+    <h2>Density</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="RHO_V_P"><td><code>RHO_V_P(P)</code></td><td>Saturated vapour density at pressure P (kg/m^3).</td><td>—</td></tr>
+        <tr id="RHO_L_P"><td><code>RHO_L_P(P)</code></td><td>Saturated liquid density at pressure P.</td><td>—</td></tr>
+        <tr id="RHO_T"><td><code>RHO_T(T)</code></td><td>Density as a function of temperature and pressure.</td><td>—</td></tr>
+        <tr id="RHO_PH"><td><code>RHO_PH(P,H)</code></td><td>Density as a function of pressure and enthalpy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SPECIFIC ENTROPY -->
+  <div class="section" id="SPECIFIC_ENTROPY">
+    <h2>Specific entropy</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="S_V_P"><td><code>S_V_P(P)</code></td><td>Saturated vapour entropy at pressure P (kJ/kg·K).</td><td>—</td></tr>
+        <tr id="S_L_P"><td><code>S_L_P(P)</code></td><td>Saturated liquid entropy at pressure P.</td><td>—</td></tr>
+        <tr id="S_P_T"><td><code>S_P_T(P,T)</code></td><td>Specific entropy as function of pressure and temperature.</td><td>—</td></tr>
+        <tr id="S_P_H"><td><code>S_P_H(P,H)</code></td><td>Specific entropy as function of pressure and enthalpy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SPECIFIC INTERNAL ENERGY -->
+  <div class="section" id="SPECIFIC_INTERNAL_ENERGY">
+    <h2>Specific internal energy</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="U_V_P"><td><code>U_V_P(P)</code></td><td>Saturated vapour internal energy at pressure P (kJ/kg).</td><td>—</td></tr>
+        <tr id="U_L_P"><td><code>U_L_P(P)</code></td><td>Saturated liquid internal energy at pressure P.</td><td>—</td></tr>
+        <tr id="U_P_T"><td><code>U_P_T(P,T)</code></td><td>Specific internal energy as function of pressure and temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CP -->
+  <div class="section" id="CP">
+    <h2>Specific isobaric heat capacity (Cp)</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="CP_V_P"><td><code>CP_V_P(P)</code></td><td>Saturated vapour Cp at pressure P (kJ/kg·K).</td><td>—</td></tr>
+        <tr id="CP_L_P"><td><code>CP_L_P(P)</code></td><td>Saturated liquid Cp at pressure P.</td><td>—</td></tr>
+        <tr id="CP_P_T"><td><code>CP_P_T(P,T)</code></td><td>Cp as a function of pressure and temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CV -->
+  <div class="section" id="CV">
+    <h2>Specific isochoric heat capacity (Cv)</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="CV_V_P"><td><code>CV_V_P(P)</code></td><td>Saturated vapour Cv at pressure P (kJ/kg·K).</td><td>—</td></tr>
+        <tr id="CV_L_P"><td><code>CV_L_P(P)</code></td><td>Saturated liquid Cv at pressure P.</td><td>—</td></tr>
+        <tr id="CV_P_T"><td><code>CV_P_T(P,T)</code></td><td>Cv as a function of pressure and temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SPEED OF SOUND -->
+  <div class="section" id="SPEED_OF_SOUND">
+    <h2>Speed of sound</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="W_V_P"><td><code>W_V_P(P)</code></td><td>Saturated vapour speed of sound at pressure P (m/s).</td><td>—</td></tr>
+        <tr id="W_L_P"><td><code>W_L_P(P)</code></td><td>Saturated liquid speed of sound at pressure P.</td><td>—</td></tr>
+        <tr id="W_P_T"><td><code>W_P_T(P,T)</code></td><td>Speed of sound as a function of pressure and temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- VISCOSITY -->
+  <div class="section" id="KINEMATIC_VISCOSITY">
+    <h2>Kinematic viscosity</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="KV_P_T"><td><code>KV_P_T(P,T)</code></td><td>Kinematic viscosity as a function of pressure and temperature (m^2/s).</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section" id="DYNAMIC_VISCOSITY">
+    <h2>Dynamic viscosity</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="MY_P_T"><td><code>MY_P_T(P,T)</code></td><td>Dynamic viscosity as a function of pressure and temperature (Pa·s).</td><td>—</td></tr>
+        <tr id="MY_PH"><td><code>MY_PH(P,H)</code></td><td>Dynamic viscosity as a function of pressure and enthalpy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- THERMAL CONDUCTIVITY -->
+  <div class="section" id="THERMAL_CONDUCTIVITY">
+    <h2>Thermal conductivity</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="TC_V_P"><td><code>TC_V_P(P)</code></td><td>Saturated vapour thermal conductivity (W/m·K).</td><td>—</td></tr>
+        <tr id="TC_L_P"><td><code>TC_L_P(P)</code></td><td>Saturated liquid thermal conductivity.</td><td>—</td></tr>
+        <tr id="TC_P_T"><td><code>TC_P_T(P,T)</code></td><td>Thermal conductivity as a function of pressure and temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SURFACE TENSION -->
+  <div class="section" id="SURFACE_TENSION">
+    <h2>Surface tension</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="ST_T"><td><code>ST_T(T)</code></td><td>Surface tension for two-phase water/steam as a function of temperature.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- VAPOUR FRACTION -->
+  <div class="section" id="VAPOUR_FRACTION">
+    <h2>Vapour fraction</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="X_PH"><td><code>X_PH(P,H)</code></td><td>Vapour fraction as a function of pressure and enthalpy (0..1).</td><td>—</td></tr>
+        <tr id="X_PS"><td><code>X_PS(P,S)</code></td><td>Vapour fraction as a function of pressure and entropy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+    <!-- VAPOUR VOLUME FRACTION -->
+  <div class="section" id="VAPOUR_VOLUME_FRACTION">
+    <h2>Vapour Volume fraction</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="VX_PH"><td><code>VX_PH(P,H)</code></td><td>Vapour Volume fraction as a function of pressure and enthalpy (0..1).</td><td>—</td></tr>
+        <tr id="VX_PS"><td><code>VX_PS(P,S)</code></td><td>Vapour Volume fraction as a function of pressure and entropy.</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+    
+  <!-- ATMOSPHERIC PRESSURE -->
+  <div class="section" id="ATMOSPHERE">
+    <h2>Atmospheric Pressure</h2>
+    <table>
+      <thead>
+        <tr><th>Function</th><th>Description</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr id="PATMO"><td><code>PATMO(ELEV)</code></td><td>Atmospheric pressure (bar) as a function of elevation (m).</td><td><code>=PATMO(900)</code> → 0.9097 bar</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <footer>
