@@ -1,5 +1,6 @@
 flask
 iapws
 flask-cors
+flasgger
 gunicorn
 numpy
